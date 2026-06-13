@@ -25,6 +25,7 @@ from api.controllers.relationship_controller import RelationshipController
 from api.controllers.graph_controller import GraphController
 from api.controllers.workflow_controller import WorkflowController
 from agents.orchestrator.controller import OrchestratorController
+from api.controllers.graph_seeder_controller import GraphSeederController
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -43,6 +44,7 @@ relationship_ctrl = RelationshipController()
 graph_ctrl = GraphController()
 workflow_ctrl = WorkflowController()
 orchestrator_ctrl = OrchestratorController()
+seeder_ctrl = GraphSeederController()
 
 def handler(event, context):
     logger.info(f"Received event: {event}")
@@ -221,6 +223,17 @@ def handler(event, context):
         # Mission Orchestrator Routes
         elif path == '/mission/execute' and method == 'POST':
             return orchestrator_ctrl.execute_mission(event)
+        # Mission Detection
+        elif path == '/detect-mission' and method == 'POST':
+            from domains.mission_detection.controller import MissionDetectionController
+            mission_detection_ctrl = MissionDetectionController()
+            return mission_detection_ctrl.detect_mission(event)
+
+        # Knowledge Graph Seeding Routes
+        elif path == '/graph/seed-mission' and method == 'POST':
+            return seeder_ctrl.seed_mission(event)
+        elif path == '/graph/seed-bulk' and method == 'POST':
+            return seeder_ctrl.seed_bulk(event)
         else:
             return {
                 "statusCode": 404,

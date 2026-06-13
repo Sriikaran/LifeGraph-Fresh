@@ -31,6 +31,9 @@ from shared.schemas.relationship_schemas import RelationshipCreate
 from agents.orchestrator.controller import OrchestratorController
 from agents.orchestrator.schemas import MissionExecutionRequest
 
+from api.controllers.graph_seeder_controller import GraphSeederController
+from shared.schemas.graph_seeder_schemas import MissionSeedRequest, BulkMissionSeedRequest
+
 app = FastAPI(
     title="Amazon LifeGraph",
     version="1.0.0",
@@ -52,6 +55,7 @@ relationship_ctrl = RelationshipController()
 graph_ctrl = GraphController()
 workflow_ctrl = WorkflowController()
 orchestrator_ctrl = OrchestratorController()
+seeder_ctrl = GraphSeederController()
 
 async def create_event(request: Request, payload: BaseModel = None) -> dict:
     """Adapts a FastAPI Request into an AWS API Gateway event format."""
@@ -482,6 +486,25 @@ async def detect_mission(request: Request, response: Response):
     event = await create_event(request)
     try:
         res = mission_detection_ctrl.detect_mission(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+# --- Knowledge Graph Seeding ---
+@app.post("/graph/seed-mission", tags=["Knowledge Graph"])
+async def seed_mission(payload: MissionSeedRequest, request: Request, response: Response):
+    event = await create_event(request, payload)
+    try:
+        res = seeder_ctrl.seed_mission(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.post("/graph/seed-bulk", tags=["Knowledge Graph"])
+async def seed_bulk(payload: BulkMissionSeedRequest, request: Request, response: Response):
+    event = await create_event(request, payload)
+    try:
+        res = seeder_ctrl.seed_bulk(event)
         return handle_controller_response(response, res)
     except Exception as e:
         return handle_exception(e, response)
