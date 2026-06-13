@@ -8,6 +8,9 @@ from core.exceptions import LifeGraphException
 from domains.users.controller import UserController
 from domains.products.controller import ProductController
 from domains.carts.controller import CartController
+from domains.memory.controller import MemoryController
+from domains.adaptive.controller import AdaptiveController
+from domains.simulator.controller import SimulatorController
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -15,6 +18,9 @@ logger.setLevel(logging.INFO)
 user_ctrl = UserController()
 product_ctrl = ProductController()
 cart_ctrl = CartController()
+memory_ctrl = MemoryController()
+adaptive_ctrl = AdaptiveController()
+simulator_ctrl = SimulatorController()
 
 def handler(event, context):
     logger.info(f"Received event: {event}")
@@ -118,6 +124,26 @@ def handler(event, context):
         elif re.match(r'^/carts/[^/]+/items$', path) and method == 'POST':
             event['pathParameters'] = {'id': path.split('/')[-2]}
             return cart_ctrl.add_item(event)
+            
+        # Memory Routes
+        elif path == '/memory/active' and method == 'GET':
+            return memory_ctrl.get_active_missions(event)
+        elif path == '/memory/history' and method == 'GET':
+            return memory_ctrl.get_mission_history(event)
+        elif path == '/memory/track' and method == 'POST':
+            return memory_ctrl.track_mission(event)
+
+        # Adaptive Routes
+        elif path == '/adaptive/analyze' and method == 'POST':
+            return adaptive_ctrl.handle(event)
+        elif path == '/adaptive/profile' and method == 'GET':
+            return adaptive_ctrl.handle(event)
+
+        # Simulator Routes
+        elif path == '/simulator/run' and method == 'POST':
+            return simulator_ctrl.run(event)
+        elif path == '/simulator/probability' and method == 'GET':
+            return simulator_ctrl.run(event)
             
         else:
             return {

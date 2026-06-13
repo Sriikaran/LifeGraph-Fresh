@@ -1,11 +1,21 @@
 import json
 from fastapi import FastAPI, Request, Response
-from pydantic import ValidationError
+from pydantic import ValidationError, BaseModel
 from core.exceptions import LifeGraphException
 
 from domains.users.controller import UserController
 from domains.products.controller import ProductController
 from domains.carts.controller import CartController
+
+from domains.users.schemas import UserCreate, UserUpdate
+from domains.products.schemas import ProductCreate, ProductUpdate
+from domains.carts.schemas import CartCreate, CartUpdate, CartAddItem
+from domains.memory.controller import MemoryController
+from domains.adaptive.controller import AdaptiveController
+from domains.simulator.controller import SimulatorController
+from domains.memory.schemas import MissionStateRequest
+from domains.adaptive.schemas import AdaptiveRequest
+from domains.simulator.schemas import SimulatorRequest
 
 app = FastAPI(
     title="Amazon LifeGraph",
@@ -16,12 +26,18 @@ app = FastAPI(
 user_ctrl = UserController()
 product_ctrl = ProductController()
 cart_ctrl = CartController()
+memory_ctrl = MemoryController()
+adaptive_ctrl = AdaptiveController()
+simulator_ctrl = SimulatorController()
 
-async def create_event(request: Request) -> dict:
+async def create_event(request: Request, payload: BaseModel = None) -> dict:
     """Adapts a FastAPI Request into an AWS API Gateway event format."""
     try:
-        body_bytes = await request.body()
-        body = body_bytes.decode('utf-8') if body_bytes else '{}'
+        if payload:
+            body = payload.model_dump_json()
+        else:
+            body_bytes = await request.body()
+            body = body_bytes.decode('utf-8') if body_bytes else '{}'
     except Exception:
         body = '{}'
         
@@ -83,8 +99,8 @@ async def list_users(request: Request, response: Response):
         return handle_exception(e, response)
 
 @app.post("/users")
-async def create_user(request: Request, response: Response):
-    event = await create_event(request)
+async def create_user(payload: UserCreate, request: Request, response: Response):
+    event = await create_event(request, payload)
     try:
         res = user_ctrl.create_user(event)
         return handle_controller_response(response, res)
@@ -101,8 +117,8 @@ async def get_user(id: str, request: Request, response: Response):
         return handle_exception(e, response)
 
 @app.put("/users/{id}")
-async def update_user(id: str, request: Request, response: Response):
-    event = await create_event(request)
+async def update_user(id: str, payload: UserUpdate, request: Request, response: Response):
+    event = await create_event(request, payload)
     try:
         res = user_ctrl.update_user(event)
         return handle_controller_response(response, res)
@@ -130,8 +146,8 @@ async def list_products(request: Request, response: Response):
         return handle_exception(e, response)
 
 @app.post("/products")
-async def create_product(request: Request, response: Response):
-    event = await create_event(request)
+async def create_product(payload: ProductCreate, request: Request, response: Response):
+    event = await create_event(request, payload)
     try:
         res = product_ctrl.create_product(event)
         return handle_controller_response(response, res)
@@ -148,8 +164,8 @@ async def get_product(id: str, request: Request, response: Response):
         return handle_exception(e, response)
 
 @app.put("/products/{id}")
-async def update_product(id: str, request: Request, response: Response):
-    event = await create_event(request)
+async def update_product(id: str, payload: ProductUpdate, request: Request, response: Response):
+    event = await create_event(request, payload)
     try:
         res = product_ctrl.update_product(event)
         return handle_controller_response(response, res)
@@ -177,8 +193,8 @@ async def list_carts(request: Request, response: Response):
         return handle_exception(e, response)
 
 @app.post("/carts")
-async def create_cart(request: Request, response: Response):
-    event = await create_event(request)
+async def create_cart(payload: CartCreate, request: Request, response: Response):
+    event = await create_event(request, payload)
     try:
         res = cart_ctrl.create_cart(event)
         return handle_controller_response(response, res)
@@ -195,8 +211,8 @@ async def get_cart(id: str, request: Request, response: Response):
         return handle_exception(e, response)
 
 @app.put("/carts/{id}")
-async def update_cart(id: str, request: Request, response: Response):
-    event = await create_event(request)
+async def update_cart(id: str, payload: CartUpdate, request: Request, response: Response):
+    event = await create_event(request, payload)
     try:
         res = cart_ctrl.update_cart(event)
         return handle_controller_response(response, res)
@@ -213,10 +229,77 @@ async def delete_cart(id: str, request: Request, response: Response):
         return handle_exception(e, response)
 
 @app.post("/carts/{id}/items")
-async def add_cart_item(id: str, request: Request, response: Response):
-    event = await create_event(request)
+async def add_cart_item(id: str, payload: CartAddItem, request: Request, response: Response):
+    event = await create_event(request, payload)
     try:
         res = cart_ctrl.add_item(event)
         return handle_controller_response(response, res)
     except Exception as e:
         return handle_exception(e, response)
+
+# --- Memory ---
+@app.get("/memory/active")
+async def get_active_missions(request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = memory_ctrl.get_active_missions(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.get("/memory/history")
+async def get_mission_history(request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = memory_ctrl.get_mission_history(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.post("/memory/track")
+async def track_mission(payload: MissionStateRequest, request: Request, response: Response):
+    event = await create_event(request, payload)
+    try:
+        res = memory_ctrl.track_mission(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+# --- Adaptive ---
+@app.post("/adaptive/analyze")
+async def analyze_behavior(payload: AdaptiveRequest, request: Request, response: Response):
+    event = await create_event(request, payload)
+    try:
+        res = adaptive_ctrl.handle(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.get("/adaptive/profile")
+async def get_shopper_profile(request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = adaptive_ctrl.handle(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+# --- Simulator ---
+@app.post("/simulator/run")
+async def simulate_mission(payload: SimulatorRequest, request: Request, response: Response):
+    event = await create_event(request, payload)
+    try:
+        res = simulator_ctrl.run(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.get("/simulator/probability")
+async def get_success_probability(request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = simulator_ctrl.run(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
