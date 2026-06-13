@@ -330,9 +330,15 @@ class AgentTestService:
 
     def test_system_status(self) -> Dict[str, Any]:
         table = get_table()
-        # Fast scan with ProjectionExpression to determine counts
-        response = table.scan(ProjectionExpression="PK,SK")
-        items = response.get("Items", [])
+        items = []
+        scan_kwargs = {"ProjectionExpression": "PK, SK"}
+        while True:
+            res_page = table.scan(**scan_kwargs)
+            items.extend(res_page.get("Items", []))
+            start_key = res_page.get("LastEvaluatedKey")
+            if not start_key:
+                break
+            scan_kwargs["ExclusiveStartKey"] = start_key
         
         missions_count = 0
         products_count = 0

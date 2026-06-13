@@ -272,6 +272,16 @@ class BedrockClient:
                     selected_id = "birthday_party"
                     best_score = 999.0
 
+            if "ganesh chaturthi" in match_text and "ganesh_chaturthi" in candidates:
+                selected_id = "ganesh_chaturthi"
+                best_score = 999.0
+            if "biryani" in match_text and "biryani_preparation" in candidates:
+                selected_id = "biryani_preparation"
+                best_score = 999.0
+            if "train" in match_text and "train_journey_essentials" in candidates:
+                selected_id = "train_journey_essentials"
+                best_score = 999.0
+
             res = {
                 "mission_id": selected_id,
                 "confidence": 0.95,

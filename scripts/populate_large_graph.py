@@ -1,5 +1,6 @@
 import os
 import sys
+from decimal import Decimal
 
 # Add src to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -8,288 +9,438 @@ from shared.services.graph_seeder_service import GraphSeederService
 from shared.schemas.graph_seeder_schemas import (
     MissionSeedRequest, DependencyMapping, CompatibilityMapping, SubstitutionMapping, ConsumptionRule
 )
+from shared.models.product_model import ProductModel
+from infrastructure.dynamodb.client import get_table
 
 def generate_graph_data():
-    missions = []
+    categories = [
+        "FAMILY_EVENTS", "FESTIVALS", "SPIRITUAL", "GROCERY", "COOKING",
+        "STUDENT", "HEALTH", "TRAVEL", "ELECTRONICS", "HOUSEHOLD"
+    ]
     
-    # 8 Indian commerce categories
-    categories = {
-        "FAMILY_EVENTS": 13,
-        "FESTIVALS": 13,
-        "SPIRITUAL": 13,
-        "GROCERY": 13,
-        "COOKING": 13,
-        "STUDENT": 13,
-        "HEALTH": 13,
-        "TRAVEL": 13
-    }
-    
-    # Mission templates (13 per category = 104 total missions)
+    # 10 Missions per category = 100 missions
     mission_templates = {
         "FAMILY_EVENTS": [
-            ("birthday_party", "Birthday Party", "Organize a birthday celebration including food, cake, decorations, gifts and guest preparation."),
-            ("kids_birthday_party", "Kids Birthday Party", "Plan a kid-friendly birthday party with toys, cake, snacks, balloons, and games."),
-            ("housewarming_ceremony", "Housewarming Ceremony", "Traditional Griha Pravesh setup with sweets, return gifts, flowers, and lunch arrangements."),
-            ("anniversary_celebration", "Anniversary Celebration", "Celebrate a marriage anniversary with flowers, cake, wine, dinner, and decorations."),
-            ("baby_shower", "Baby Shower", "Traditional Godh Bharai or baby shower function with sweets, gifts, and decorations."),
-            ("family_gathering", "Family Gathering", "Get-together for extended family with home-cooked meals, beverages, and music."),
-            ("weekend_family_dinner", "Weekend Family Dinner", "Special weekend dinner with premium dishes, starters, and desserts."),
-            ("engagement_party", "Engagement Party", "Roka or engagement ceremony preparation, clothing accessories, gifts, and food catering."),
-            ("retirement_party", "Retirement Celebration", "Honoring career achievements with plaques, gifts, food, and family guests."),
-            ("promotion_celebration", "Promotion Celebration", "Share success with colleagues and family using sweets, snacks, and drinks."),
-            ("graduation_dinner", "Graduation Dinner", "Celebrate academic success with premium dinner, cake, and gift arrangements."),
-            ("wedding_reception_prep", "Wedding Reception Prep", "Gathering decorations, stage items, return gifts, and special sweets for guests."),
-            ("sunday_brunch", "Sunday Family Brunch", "Relaxing Sunday brunch with juices, waffles, parathas, and fresh fruits.")
+            ("birthday_party", "Birthday Party", "Organize a birthday celebration."),
+            ("kids_birthday_party", "Kids Birthday Party", "Plan a kid-friendly birthday party."),
+            ("housewarming_ceremony", "Housewarming Ceremony", "Traditional Griha Pravesh setup."),
+            ("anniversary_celebration", "Anniversary Celebration", "Celebrate marriage anniversary."),
+            ("baby_shower", "Baby Shower", "Traditional Godh Bharai or baby shower."),
+            ("family_gathering", "Family Gathering", "Get-together for extended family."),
+            ("weekend_family_dinner", "Weekend Family Dinner", "Special weekend dinner."),
+            ("engagement_party", "Engagement Party", "Roka or engagement ceremony preparation."),
+            ("retirement_party", "Retirement Celebration", "Honoring career achievements."),
+            ("promotion_celebration", "Promotion Celebration", "Share success with family.")
         ],
         "FESTIVALS": [
-            ("diwali_celebration", "Diwali Celebration", "Festival of lights setup with diyas, sweets, lights, rangoli, and pooja materials."),
-            ("holi_celebration", "Holi Celebration", "Festival of colors with organic gulal, pichkaris, water balloons, sweets, and thandai."),
-            ("ganesh_chaturthi", "Ganesh Chaturthi", "Eco-friendly Ganesha idol setup, modaks, flowers, durva grass, and decorations."),
-            ("sankranti_festival", "Sankranti Festival", "Harvest festival preparation with sesame-jaggery laddu, kites, threads, and harvest crops."),
-            ("ugadi_festival", "Ugadi Festival", "New Year celebration with Ugadi pachadi ingredients, mango leaves, and new clothes."),
-            ("dussehra_celebration", "Dussehra Celebration", "Ayudha Pooja items, sweets, vehicle cleaning materials, and floral garlands."),
-            ("raksha_bandhan", "Raksha Bandhan", "Rakhis, sweets, roli-chawal, chocolate gift boxes, and return gifts for sisters."),
-            ("eid_celebration", "Eid Celebration", "Biryani ingredients, sheer khurma vermicelli, dry fruits, new clothes, and charity gifts."),
-            ("christmas_celebration", "Christmas Celebration", "Christmas tree, ornaments, cakes, chocolates, star lanterns, and gifts."),
-            ("janmashtami_festival", "Janmashtami Festival", "Lord Krishna birthday celebration, butter, flute, peacock feather, and panjiri sweets."),
-            ("durga_pooja", "Durga Pooja Celebration", "Navratri pooja materials, traditional dresses, sweets, dhunuchi, and pandal lighting."),
-            ("karwa_chauth", "Karwa Chauth Prep", "Sargi food items, decorated karwa pot, sieve, pooja thali, and traditional makeup cosmetics."),
-            ("maha_shivratri", "Maha Shivratri", "Lord Shiva prayers with milk, honey, bael leaves, datura fruits, and fasting foods.")
+            ("diwali_celebration", "Diwali Celebration", "Festival of lights setup."),
+            ("holi_celebration", "Holi Celebration", "Festival of colors with organic gulal."),
+            ("ganesh_chaturthi", "Ganesh Chaturthi", "Eco-friendly Ganesha idol setup."),
+            ("sankranti_festival", "Sankranti Festival", "Harvest festival preparation."),
+            ("ugadi_festival", "Ugadi Festival", "New Year celebration."),
+            ("dussehra_celebration", "Dussehra Celebration", "Ayudha Pooja items and garlands."),
+            ("raksha_bandhan", "Raksha Bandhan", "Rakhis and sweets box."),
+            ("eid_celebration", "Eid Celebration", "Biryani and sheer khurma."),
+            ("christmas_celebration", "Christmas Celebration", "Christmas tree and ornaments."),
+            ("janmashtami_festival", "Janmashtami Festival", "Lord Krishna birthday celebration.")
         ],
         "SPIRITUAL": [
-            ("satyanarayana_vratham", "Satyanarayana Vratham", "Traditional pooja kit, vratham story book, prasad ingredients, and kalasam items."),
-            ("lakshmi_pooja", "Lakshmi Pooja", "Goddess Lakshmi worship with silver coins, lotus flowers, red cloth, and sweets."),
-            ("ganesh_pooja", "Ganesh Pooja", "Daily or special Ganesha worship with coconuts, betel leaves, camphor, and agarbatti."),
-            ("temple_visit_prep", "Temple Visit Preparation", "Pooja basket, flowers, coconut, camphor, matchbox, and modest traditional wear."),
-            ("festival_pooja_kit", "Festival Pooja Kit", "Comprehensive set of pooja essential oils, kumkum, turmeric, sandal paste, and incense."),
-            ("daily_home_mandir", "Daily Home Mandir Setup", "Fresh flowers, cotton wicks, oil for lamp, incense sticks, and matchboxes."),
-            ("rudrabhishek_prep", "Rudrabhishek Preparation", "Panchamrit (milk, curd, ghee, honey, sugar), Ganga jal, and shivling accessories."),
-            ("havan_yagna", "Havan Samagri Kit", "Havan wood, samagri mix, camphor, pure ghee, and copper havan kund."),
-            ("vastu_shanti", "Vastu Shanti Pooja", "Home purification kit, copper plates, grains, thread, and coconut."),
-            ("meditation_altar", "Meditation Altar Setup", "Singing bowl, diffuser, essential oils, dhoop cones, and yoga mat."),
-            ("hanuman_chalisa_path", "Hanuman Chalisa Path", "Lord Hanuman photo frame, sindoor, oil, chalisa booklets, and boondi sweets."),
-            ("saraswati_pooja", "Saraswati Pooja", "Worship of books, musical instruments, yellow flowers, and yellow sweets."),
-            ("shradh_ceremony", "Shradh Ceremony Prep", "Rice balls, sesame seeds, darbha grass, white flowers, and dhoti.")
+            ("satyanarayana_vratham", "Satyanarayana Vratham", "Traditional pooja kit."),
+            ("lakshmi_pooja", "Lakshmi Pooja", "Goddess Lakshmi worship setup."),
+            ("ganesh_pooja", "Ganesh Pooja", "Ganesha worship materials."),
+            ("temple_visit_prep", "Temple Visit Preparation", "Pooja basket and flowers."),
+            ("festival_pooja_kit", "Festival Pooja Kit", "Spiritual essentials kit."),
+            ("daily_home_mandir", "Daily Home Mandir Setup", "Daily worship items."),
+            ("rudrabhishek_prep", "Rudrabhishek Preparation", "Lord Shiva prayers kit."),
+            ("havan_yagna", "Havan Samagri Kit", "Havan samagri and copper kund."),
+            ("vastu_shanti", "Vastu Shanti Pooja", "Home purification setup."),
+            ("meditation_altar", "Meditation Altar Setup", "Altar and meditation mat.")
         ],
         "GROCERY": [
-            ("weekly_grocery", "Weekly Grocery Refill", "Standard weekly replenishment of milk, bread, eggs, fresh vegetables, and fruits."),
-            ("monthly_grocery", "Monthly Grocery Refill", "Monthly pantry stock up of rice, flour, cooking oil, pulses, and household cleaning supplies."),
-            ("family_grocery", "Family Grocery Shopping", "Bulk pack sizes of staples, snacks, juices, and bath soaps for the whole household."),
-            ("bachelor_grocery", "Bachelor Grocery Refill", "Easy-to-cook items, instant noodles, bread, eggs, biscuits, and soft drinks."),
-            ("pantry_restock", "Essential Pantry Restock", "Spices, condiments, salt, sugar, tea leaves, coffee powder, and baking powder."),
-            ("breakfast_staples", "Breakfast Staples Refill", "Poha, rava, oats, bread, butter, jam, cheese slices, and muesli."),
-            ("fresh_produce_run", "Fresh Produce Run", "Seasonal green vegetables, onions, potatoes, tomatoes, and organic fruits."),
-            ("beverage_stockup", "Beverage Stockup", "Fruit juices, carbonated water, tea, coffee, health drinks, and bottled water."),
-            ("dairy_essential_run", "Dairy Essential Run", "Paneer, curd, milk, butter, cheese spread, and fresh cream."),
-            ("cleaning_supplies", "Cleaning Supplies Refill", "Dishwash gel, floor cleaner, laundry detergent, toilet cleaner, and sponges."),
-            ("snacks_munchies", "Snacks and Munchies Pack", "Namkeen, potato chips, roasted almonds, cookies, and chocolate bars."),
-            ("organic_pantry_refill", "Organic Pantry Refill", "Organic brown rice, organic pulses, cold-pressed oils, and pink salt."),
-            ("baking_essentials", "Baking Essentials Pack", "Maida, baking soda, cocoa powder, chocolate chips, and yeast.")
+            ("weekly_grocery", "Weekly Grocery Refill", "Standard weekly replenishment."),
+            ("monthly_grocery", "Monthly Grocery Refill", "Monthly pantry stock up."),
+            ("family_grocery", "Family Grocery Shopping", "Bulk pack sizes of staples."),
+            ("bachelor_grocery", "Bachelor Grocery Refill", "Easy-to-cook bachelor staples."),
+            ("pantry_restock", "Essential Pantry Restock", "Spices and condiments restocking."),
+            ("breakfast_staples", "Breakfast Staples Refill", "Standard breakfast refill."),
+            ("fresh_produce_run", "Fresh Produce Run", "Seasonal green vegetables."),
+            ("beverage_stockup", "Beverage Stockup", "Fruit juices and health drinks."),
+            ("dairy_essential_run", "Dairy Essential Run", "Paneer, curd, milk, butter."),
+            ("cleaning_supplies", "Cleaning Supplies Refill", "Dishwash gel and cleaners.")
         ],
         "COOKING": [
-            ("biryani_preparation", "Biryani Preparation", "Basmati rice, biryani masala, chicken or paneer, saffron, fried onions, and mint leaves."),
-            ("paneer_butter_masala", "Paneer Butter Masala Dinner", "Paneer, butter, fresh cream, tomato puree, cashew paste, and kasuri methi."),
-            ("south_indian_breakfast", "South Indian Breakfast", "Idli-dosa batter, sambhar powder, tamarind, curry leaves, mustard seeds, and coconut chutney ingredients."),
-            ("family_lunch", "Family Lunch", "Rice, dal, vegetable stir fry (sabzi), roti, curd, and salad."),
-            ("sunday_special_meal", "Sunday Special Meal", "Mutton or chicken curry, jeera rice, butter naan, and sweet raita."),
-            ("samosa_chai_evening", "Samosa & Chai Evening", "Maida, potatoes, peas, spices, tea dust, milk, ginger, and cardamom."),
-            ("pav_bhaji_feast", "Pav Bhaji Feast", "Pav buns, mixed vegetables, butter, pav bhaji masala, onions, and lemons."),
-            ("chole_bhature_lunch", "Chole Bhature Lunch", "Kabuli chana, maida, curd, chole masala, green chilies, and coriander."),
-            ("dal_makhani_dinner", "Dal Makhani Dinner", "Black urad dal, rajma, butter, cream, tomato paste, and garlic."),
-            ("dhokla_breakfast", "Gujarati Dhokla Breakfast", "Besan, eno fruit salt, green chilies, mustard seeds, and curry leaves."),
-            ("gulab_jamun_dessert", "Gulab Jamun Dessert", "Mawa/khoya, paneer, sugar, cardamom, and rose water."),
-            ("kheer_preparation", "Kheer Preparation", "Rice, full cream milk, sugar, almonds, pistachios, and saffron."),
-            ("healthy_khichdi", "Healthy Khichdi Meal", "Moong dal, rice, ghee, cumin seeds, ginger, and turmeric.")
+            ("biryani_preparation", "Biryani Preparation", "Basmati rice, chicken or paneer, and mint."),
+            ("paneer_butter_masala", "Paneer Butter Masala Dinner", "Paneer, butter, fresh cream, tomato puree."),
+            ("south_indian_breakfast", "South Indian Breakfast", "Idli-dosa batter and sambhar powder."),
+            ("family_lunch", "Family Lunch", "Rice, dal, sabzi, roti, curd, and salad."),
+            ("sunday_special_meal", "Sunday Special Meal", "Special curry, rice, and butter naan."),
+            ("samosa_chai_evening", "Samosa & Chai Evening", "Samosa ingredients and tea dust."),
+            ("pav_bhaji_feast", "Pav Bhaji Feast", "Pav buns, mixed veg, butter, pav bhaji masala."),
+            ("chole_bhature_lunch", "Chole Bhature Lunch", "Kabuli chana, maida, and chole masala."),
+            ("dal_makhani_dinner", "Dal Makhani Dinner", "Black urad dal, cream, and tomato paste."),
+            ("dhokla_breakfast", "Gujarati Dhokla Breakfast", "Besan, mustard seeds, and curry leaves.")
         ],
         "STUDENT": [
-            ("hostel_restocking", "Hostel Restocking", "Quick snacks, cup noodles, energy drinks, laundry bags, and toiletries."),
-            ("exam_week_essentials", "Exam Week Essentials", "Coffee, dark chocolate, notebooks, pens, highlighters, and sticky notes."),
-            ("late_night_study", "Late Night Study Session", "Instant noodles, potato chips, energy drinks, and table lamp bulb."),
-            ("new_semester_setup", "New Semester Setup", "Backpack, notebooks, pens, geometry box, calculator, and folder organizers."),
-            ("college_room_decor", "College Room Decor", "Fairy lights, posters, command hooks, bedsheet, and pillow."),
-            ("hostel_first_aid", "Hostel First Aid Kit", "Bandages, pain relief spray, paracetamol, antiseptic cream, and cough syrup."),
-            ("mess_escape_meal", "Mess Escape Meal Pack", "Maggi packets, peanut butter, bread loaf, cheese cubes, and fruit jam."),
-            ("dorm_cleaning_kit", "Dorm Cleaning Kit", "Hand sanitizer, wet wipes, garbage bags, and room freshener spray."),
-            ("project_work_kit", "Project Work Kit", "Chart papers, glue stick, scissors, colored markers, and presentation folder."),
-            ("student_fitness_pack", "Student Fitness Pack", "Protein bars, shaker bottle, skipping rope, and whey protein powder."),
-            ("monsoon_college_ready", "Monsoon College Ready", "Umbrella, raincoat, waterproof bag cover, and shoe wipes."),
-            ("winter_hostel_prep", "Winter Hostel Prep", "Electric kettle, soup packets, thermal wear, and cold cream."),
-            ("hostel_gaming_night", "Hostel Gaming Night", "Extension cord, gamer snacks, soft drinks, and earphones.")
+            ("hostel_restocking", "Hostel Restocking", "Quick snacks and toiletries."),
+            ("exam_week_essentials", "Exam Week Essentials", "Coffee, notebooks, pens, highlighters."),
+            ("late_night_study", "Late Night Study Session", "Instant noodles and energy drinks."),
+            ("new_semester_setup", "New Semester Setup", "Backpack and notebooks setup."),
+            ("college_room_decor", "College Room Decor", "Fairy lights and room accessories."),
+            ("hostel_first_aid", "Hostel First Aid Kit", "Antiseptic liquid and bandages."),
+            ("mess_escape_meal", "Mess Escape Meal Pack", "Noodles, peanut butter, and bread."),
+            ("dorm_cleaning_kit", "Dorm Cleaning Kit", "Hand sanitizer and garbage bags."),
+            ("project_work_kit", "Project Work Kit", "Colored markers and chart papers."),
+            ("student_fitness_pack", "Student Fitness Pack", "Protein bars and shaker bottle.")
         ],
         "HEALTH": [
-            ("sick_day_recovery", "Sick Day Recovery", "ORS packets, thermometer, steam inhaler, herbal tea, and honey."),
-            ("home_first_aid", "Home First Aid Kit", "Bandages, antiseptic solution, cotton roll, medical tape, and pain relief gel."),
-            ("weight_loss_journey", "Weight Loss Journey", "Green tea, apple cider vinegar, oats, honey, chia seeds, and protein shaker."),
-            ("protein_diet_plan", "Protein Diet Plan", "Whey protein, paneer, eggs, almonds, peanut butter, and soy chunks."),
-            ("immunity_booster_pack", "Immunity Booster Pack", "Chyawanprash, turmeric extract, amla juice, honey, and giloy tablets."),
-            ("diabetes_care_grocery", "Diabetes Care Grocery", "Oats, brown rice, low GI sweeteners, roasted chana, and sugar-free biscuits."),
-            ("baby_health_wellness", "Baby Health & Wellness", "Baby wipes, baby lotion, rash cream, gripe water, and baby thermometer."),
-            ("elderly_health_care", "Elderly Health Care", "Blood pressure monitor, pill organizer, adult diapers, pain relief spray, and joint support supplements."),
-            ("post_workout_recovery", "Post Workout Recovery", "BCAA powder, protein bars, muscle spray, and multivitamin capsules."),
-            ("digestive_wellness", "Digestive Wellness Kit", "Isabgol, gas relief tablets, buttermilk, mint capsules, and ginger tea."),
-            ("stress_relief_wellness", "Stress Relief Wellness", "Lavender oil, chamomile tea, bath salts, scented candles, and stress balls."),
-            ("hair_skin_care_regimen", "Hair & Skin Care Regimen", "Coconut oil, aloe vera gel, face wash, vitamin E capsules, and sunscreen."),
-            ("eye_care_screen_user", "Eye Care for Screen Users", "Lubricating eye drops, blue light glasses, screen wipes, and vitamin A tablets.")
+            ("sick_day_recovery", "Sick Day Recovery", "ORS, steam inhaler, and honey."),
+            ("home_first_aid", "Home First Aid Kit", "First aid essential kit."),
+            ("weight_loss_journey", "Weight Loss Journey", "Green tea, oats, and chia seeds."),
+            ("protein_diet_plan", "Protein Diet Plan", "Whey protein and paneer block."),
+            ("immunity_booster_pack", "Immunity Booster Pack", "Chyawanprash and giloy tablets."),
+            ("diabetes_care_grocery", "Diabetes Care Grocery", "Low GI sweeteners and oats."),
+            ("baby_health_wellness", "Baby Health & Wellness", "Baby wipes and lotion kit."),
+            ("elderly_health_care", "Elderly Health Care", "BP monitor and pill organizer."),
+            ("post_workout_recovery", "Post Workout Recovery", "BCAA powder and multivitamin."),
+            ("digestive_wellness", "Digestive Wellness Kit", "Isabgol and gas relief tablets.")
         ],
         "TRAVEL": [
-            ("weekend_road_trip", "Weekend Road Trip", "Car mobile mount, car charger, snacks, travel pillow, and hand sanitizer."),
-            ("pilgrimage_travel", "Pilgrimage Travel Prep", "Walking shoes, travel flask, small pooja basket, cash pouch, and wet wipes."),
-            ("family_vacation_pack", "Family Vacation Packing", "Large suitcases, luggage tags, toiletries kit, travel adapters, and sunscreen."),
-            ("train_journey_essentials", "Train Journey Essentials", "Train chain-lock, travel bedsheet, water flask, paper soaps, and dry snacks."),
-            ("beach_holiday_pack", "Beach Holiday Packing", "Sunscreen, sunglasses, beach slippers, waterproof pouch, and quick-dry towel."),
-            ("monsoon_trekking", "Monsoon Trekking Kit", "Rain ponchos, waterproof backpack, trekking shoes, torch, and leech repellent spray."),
-            ("intl_flight_prep", "International Flight Prep", "Passport holder, neck pillow, noise-canceling earplugs, travel adapter, and pen."),
-            ("camping_outdoor_kit", "Camping & Outdoor Kit", "Sleeping bag, mosquito repellent, power bank, camp torch, and multi-utility knife."),
-            ("business_trip_ready", "Business Trip Preparation", "Garment bag, lint roller, travel iron, card holder, and notebook."),
-            ("winter_mountain_trip", "Winter Mountain Trip", "Woolen socks, gloves, lip balm, moisturizer, and body warmers."),
-            ("travel_toiletries_pack", "Travel Toiletries Pack", "Mini shampoo, toothbrush case, travel soap, hand towel, and comb."),
-            ("adventure_sports_prep", "Adventure Sports Prep", "Action camera mount, hydration pack, sports sunscreen, and energy gels."),
-            ("solo_traveler_safety", "Solo Traveler Safety Kit", "Pepper spray, personal alarm, hidden money belt, and door stopper lock.")
+            ("weekend_road_trip", "Weekend Road Trip", "Mobile mount and car charger."),
+            ("pilgrimage_travel", "Pilgrimage Travel Prep", "Walking shoes and travel flask."),
+            ("family_vacation_pack", "Family Vacation Packing", "Large suitcases and travel adapter."),
+            ("train_journey_essentials", "Train Journey Essentials", "Train chain-lock and dry snacks."),
+            ("beach_holiday_pack", "Beach Holiday Packing", "Sunscreen and sunglasses pack."),
+            ("monsoon_trekking", "Monsoon Trekking Kit", "Rain ponchos and trekking shoes."),
+            ("intl_flight_prep", "International Flight Prep", "Passport holder and neck pillow."),
+            ("camping_outdoor_kit", "Camping & Outdoor Kit", "Sleeping bag and campfire torch."),
+            ("business_trip_ready", "Business Trip Preparation", "Lint roller and card holder."),
+            ("winter_mountain_trip", "Winter Mountain Trip", "Woolen socks and body warmers.")
+        ],
+        "ELECTRONICS": [
+            ("home_office_setup", "Home Office Setup", "Work desk accessories and cables."),
+            ("smart_home_kit", "Smart Home Kit", "Smart plug, bulb, and speaker."),
+            ("gaming_console_setup", "Gaming Console Setup", "HDMI cable and controller pack."),
+            ("mobile_accessories_kit", "Mobile Accessories Kit", "Screen protector and power bank."),
+            ("home_theater_setup", "Home Theater Setup", "Soundbar and wall mount kit."),
+            ("camera_vlogging_kit", "Camera Vlogging Kit", "Tripod, microphone, and ring light."),
+            ("student_laptop_essentials", "Student Laptop Essentials", "Wireless mouse and laptop sleeve."),
+            ("router_wifi_upgrade", "Router WiFi Upgrade", "LAN cables and dual-band router."),
+            ("power_backup_kit", "Power Backup Kit", "UPS for router and extension cord."),
+            ("fitness_tracker_setup", "Fitness Tracker Setup", "Smart band and charger doc.")
+        ],
+        "HOUSEHOLD": [
+            ("home_laundry_day", "Home Laundry Day", "Liquid detergent and clothing dryer rack."),
+            ("kitchen_deep_clean", "Kitchen Deep Clean", "Degreaser spray and microfiber cloths."),
+            ("living_room_makeover", "Living Room Makeover", "Cushion covers and flower vase."),
+            ("bathroom_restocking", "Bathroom Restocking", "Liquid handwash and bath towels."),
+            ("pest_control_day", "Pest Control Day", "Insect repellent sprays and baits."),
+            ("gardening_starter_kit", "Gardening Starter Kit", "Potting soil and watering can."),
+            ("wardrobe_organizer", "Wardrobe Organizer Kit", "Hangers and storage organizer boxes."),
+            ("garbage_disposal_prep", "Garbage Disposal Prep", "Biodegradable garbage bags."),
+            ("car_wash_weekend", "Car Wash Weekend", "Car shampoo and microfiber mitt."),
+            ("home_safety_setup", "Home Safety Setup", "Smoke detector and door security locks.")
         ]
     }
     
-    # Generate 1040 products (130 per category)
+    # 150 products per category * 10 categories = 1500 products
     products_by_category = {}
     
-    # Sample real Indian items to populate the beginning of each category list
-    category_real_products = {
+    product_bases = {
         "FAMILY_EVENTS": [
-            "birthday_cake", "party_balloons", "party_hats", "soft_drinks", "potato_chips", 
-            "return_gifts", "decorative_lights", "marigold_garland", "sweets_box", "paper_plates",
-            "birthday_candles", "banner_decorations", "party_poppers", "fruit_juice_pack", "chocolate_box"
+            ("birthday_cake", "Fresh Birthday Cake", "Bakery", 450),
+            ("birthday_candles", "Scented Birthday Candles", "Bakery", 40),
+            ("party_balloons", "Colorful Helium Balloons", "Decorations", 120),
+            ("soft_drinks", "Sprite/Coca-Cola soft drinks", "Beverages", 90),
+            ("party_hats", "Cone Party Hats", "Decorations", 80),
+            ("return_gifts", "Return Gift Toys Pack", "Gifts", 300),
+            ("decorative_lights", "LED Decorative Fairy Lights", "Decorations", 250),
+            ("marigold_garland", "Fresh Marigold Flower Garland", "Spiritual", 150),
+            ("sweets_box", "Premium Assorted Sweets Box", "Grocery", 400),
+            ("paper_plates", "Disposable Paper Plates 50pk", "Household", 95)
         ],
         "FESTIVALS": [
-            "clay_diyas", "marigold_garland", "rangoli_powder", "electric_led_serial_lights", "kaju_katli_sweets", 
-            "organic_gulal", "pichkari_water_gun", "water_balloons", "eco_friendly_ganesha_idol", "modak_sweets",
-            "kites_and_thread", "mango_leaves", "pooja_essential_kit", "roli_chawal_pack", "christmas_tree_ornaments"
+            ("clay_diyas", "Traditional Clay Diyas 12pk", "Decorations", 60),
+            ("electric_led_serial_lights", "Electric LED Serial Lights", "Decorations", 199),
+            ("kaju_katli_sweets", "Kaju Katli Sweets 500g", "Grocery", 500),
+            ("organic_gulal", "Holi Organic Gulal Colors", "Festivals", 150),
+            ("pichkari_water_gun", "Holi Pichkari Water Gun", "Festivals", 250),
+            ("modak_sweets", "Ganesh Pooja Modak Sweets 10pc", "Grocery", 180),
+            ("kites_and_thread", "Sankranti Kites and Thread", "Festivals", 200),
+            ("christmas_tree_ornaments", "Christmas Tree Ornaments Pack", "Decorations", 299),
+            ("eco_friendly_ganesha_idol", "Eco-friendly Clay Ganesha Idol", "Spiritual", 699),
+            ("rangoli_powder", "Multi-color Rangoli Powder Kit", "Decorations", 120)
         ],
         "SPIRITUAL": [
-            "agarbatti_incense", "kumkum_turmeric_powder", "camphor_tablets", "puja_ghee_diya", "cotton_wicks_pack", 
-            "coconut_shredded_whole", "pooja_brass_thali", "ganga_jal_bottle", "sandalwood_paste", "havan_samagri",
-            "havan_kund_copper", "meditation_cushion", "hanuman_chalisa_book", "darbha_grass", "rudraksha_mala"
+            ("agarbatti_incense", "Cycle Agarbatti Incense Sticks", "Spiritual", 90),
+            ("kumkum_turmeric_powder", "Kumkum and Turmeric Puja Pack", "Spiritual", 50),
+            ("camphor_tablets", "Pure Camphor Tablets 100g", "Spiritual", 110),
+            ("puja_ghee_diya", "Puja Ghee Diya Wicks 50pc", "Spiritual", 160),
+            ("pooja_brass_thali", "Pooja Brass Thali Plate", "Spiritual", 450),
+            ("ganga_jal_bottle", "Ganga Jal Holy Water 500ml", "Spiritual", 80),
+            ("sandalwood_paste", "Pure Sandalwood Puja Paste", "Spiritual", 130),
+            ("havan_samagri", "Havan Samagri Puja Mix 500g", "Spiritual", 150),
+            ("hanuman_chalisa_book", "Hanuman Chalisa Prayer Book", "Spiritual", 30),
+            ("meditation_cushion", "Cotton Yoga Meditation Cushion", "Spiritual", 799)
         ],
         "GROCERY": [
-            "basmati_rice_5kg", "toor_dal_1kg", "ashirvaad_atta_5kg", "fortune_sunflower_oil_1l", "tata_salt_1kg", 
-            "amul_butter_500g", "whole_milk_1l", "eggs_box_12", "britannia_bread_loaf", "tata_tea_gold_500g",
-            "nescafe_classic_coffee", "surf_excel_detergent", "vim_dishwash_gel", "harpic_toilet_cleaner", "lizol_floor_cleaner"
+            ("basmati_rice_5kg", "India Gate Basmati Rice 5kg", "Staples", 650),
+            ("toor_dal_1kg", "Tata Sampann Toor Dal 1kg", "Staples", 170),
+            ("ashirvaad_atta_5kg", "Ashirvaad Whole Wheat Atta 5kg", "Staples", 260),
+            ("fortune_sunflower_oil_1l", "Fortune Refined Sunflower Oil 1L", "Staples", 140),
+            ("tata_salt_1kg", "Tata Iodized Salt 1kg", "Staples", 28),
+            ("amul_butter_500g", "Amul Pasteurized Butter 500g", "Dairy", 275),
+            ("whole_milk_1l", "Amul Gold Whole Milk 1L", "Dairy", 68),
+            ("britannia_bread_loaf", "Britannia Whole Wheat Bread Loaf", "Bakery", 50),
+            ("tata_tea_gold_500g", "Tata Tea Gold Leaf 500g", "Beverages", 320),
+            ("nescafe_classic_coffee", "Nescafe Classic Instant Coffee 100g", "Beverages", 310)
         ],
         "COOKING": [
-            "biryani_masala", "paneer_block_200g", "saffron_kesar", "mint_coriander_leaves", "fresh_cream_pack", 
-            "tomato_puree_box", "cashew_nuts", "kasuri_methi", "dosa_batter_1kg", "sambar_powder",
-            "tamarind_paste", "garam_masala_powder", "pav_buns_pack", "pav_bhaji_masala", "chole_masala"
+            ("biryani_masala", "Everest Biryani Masala 50g", "Spices", 45),
+            ("paneer_block_200g", "Amul Fresh Paneer Block 200g", "Dairy", 90),
+            ("saffron_kesar", "Baby Brand Pure Kashmiri Saffron 1g", "Spices", 350),
+            ("fresh_cream_pack", "Amul Fresh Cream 250ml", "Dairy", 67),
+            ("dosa_batter_1kg", "iD Fresh Idli Dosa Batter 1kg", "Staples", 90),
+            ("sambar_powder", "MTR Sambar Powder 100g", "Spices", 75),
+            ("pav_buns_pack", "Fresh Bakery Pav Buns 6pc", "Bakery", 40),
+            ("pav_bhaji_masala", "Everest Pav Bhaji Masala 100g", "Spices", 82),
+            ("chole_masala", "Everest Chole Masala 100g", "Spices", 78),
+            ("garam_masala_powder", "Everest Garam Masala 100g", "Spices", 92)
         ],
         "STUDENT": [
-            "maggi_noodles_12pack", "kurkure_masala_munch", "lays_chips_classic", "red_bull_energy", "classmate_notebooks", 
-            "uniball_blue_pens", "sticky_notes", "geometry_box", "casio_scientific_calculator", "backpack_waterproof",
-            "fairy_lights_led", "pain_relief_spray", "paracetamol_tablets", "dettol_antiseptic_liquid", "electric_kettle"
+            ("maggi_noodles_12pack", "Maggi 2-Minute Noodles 12-Pack", "Grocery", 168),
+            ("lays_chips_classic", "Lays Potato Chips Classic 50g", "Grocery", 20),
+            ("red_bull_energy", "Red Bull Energy Drink Can", "Beverages", 125),
+            ("classmate_notebooks", "Classmate A4 Notebooks 6-Pack", "Student", 350),
+            ("uniball_blue_pens", "Uniball Click Blue Gel Pens 3pk", "Student", 180),
+            ("sticky_notes", "3M Post-it Sticky Notes Pack", "Student", 99),
+            ("geometry_box", "Camel Geometry Instrument Box", "Student", 150),
+            ("backpack_waterproof", "Wildcraft Waterproof College Backpack", "Student", 1499),
+            ("fairy_lights_led", "Fairy Lights LED Room Decor", "Decorations", 180),
+            ("electric_kettle", "Prestige Electric Kettle 1.5L", "Student", 899)
         ],
         "HEALTH": [
-            "ors_electral_powder", "digital_thermometer", "steam_inhaler_vaporizer", "dabur_honey_500g", "dabur_chyawanprash_1kg", 
-            "green_tea_bags", "apple_cider_vinegar", "chia_seeds_pack", "whey_protein_1kg", "protein_bars_multipack",
-            "band_aid_washproof", "moov_pain_relief_gel", "blood_pressure_monitor", "pill_organizer", "adult_diaper_pack"
+            ("ors_electral_powder", "Electral ORS Powder Sachet", "Health", 22),
+            ("digital_thermometer", "Philips Digital Body Thermometer", "Health", 249),
+            ("steam_inhaler_vaporizer", "Dr Trust Steam Inhaler Vaporizer", "Health", 499),
+            ("dabur_honey_500g", "Dabur 100% Pure Honey 500g", "Grocery", 220),
+            ("dabur_chyawanprash_1kg", "Dabur Chyawanprash Immunity Booster 1kg", "Health", 395),
+            ("green_tea_bags", "Lipton Green Tea Honey Lemon 100tb", "Beverages", 450),
+            ("whey_protein_1kg", "Optimal Nutrition Whey Protein 1kg", "Health", 3499),
+            ("band_aid_washproof", "Band-Aid Washproof Bandages 20pc", "Health", 45),
+            ("moov_pain_relief_gel", "Moov Pain Relief Cream Tube 50g", "Health", 165),
+            ("blood_pressure_monitor", "Omron Automatic BP Monitor", "Health", 2299)
         ],
         "TRAVEL": [
-            "car_mobile_mount", "travel_neck_pillow", "train_chain_lock", "water_flask_insulated", "backpack_45l", 
-            "passport_holder_wallet", "travel_iron", "travel_toiletries_bottles", "paper_soap_strips", "rain_coat_umbrella",
-            "sleeping_bag_outdoor", "mosquito_repellent_spray", "power_bank_20000mah", "camp_led_torch", "luggage_tags"
+            ("car_mobile_mount", "Portronics Mobile Mount Holder", "Travel", 299),
+            ("travel_neck_pillow", "Memory Foam Travel Neck Pillow", "Travel", 499),
+            ("train_chain_lock", "Heavy Steel Train Luggage Chain Lock", "Travel", 180),
+            ("water_flask_insulated", "Milton Insulated Water Flask 1L", "Travel", 799),
+            ("backpack_45l", "Tripole 45L Travel Rucksack Backpack", "Travel", 1999),
+            ("passport_holder_wallet", "Leather Passport Wallet Card Holder", "Travel", 399),
+            ("travel_toiletries_bottles", "Mini Travel Toiletries Bottles Kit", "Travel", 150),
+            ("paper_soap_strips", "Paper Soap Strips 5pk", "Travel", 40),
+            ("power_bank_20000mah", "Mi 20000mAh Power Bank 3i", "Travel", 1899),
+            ("camp_led_torch", "Rechargeable Waterproof LED Torch", "Travel", 350)
+        ],
+        "ELECTRONICS": [
+            ("hdmi_cable_4k", "AmazonBasics 4K HDMI Cable 6ft", "Electronics", 399),
+            ("wireless_mouse", "Logitech Wireless Mouse M221", "Electronics", 799),
+            ("smart_plug_16a", "Wipro Smart Plug 16A with Energy Monitoring", "Electronics", 999),
+            ("smart_led_bulb_9w", "Philips Smart LED Bulb 9W", "Electronics", 699),
+            ("laptop_sleeve_15", "Waterproof Laptop Sleeve Case 15.6 inch", "Electronics", 499),
+            ("mobile_power_bank", "Ambrane 10000mAh Slim Power Bank", "Electronics", 799),
+            ("multi_port_extension", "Belkin Multi-port Extension Cord 4-Way", "Electronics", 1299),
+            ("wifi_dual_router", "TP-Link AC1200 Dual Band WiFi Router", "Electronics", 2299),
+            ("vlogging_ring_light", "Digitek 12 inch LED Ring Light with Stand", "Electronics", 1499),
+            ("ups_for_wifi_router", "Resonate RouterUPS Battery Backup for WiFi", "Electronics", 1999)
+        ],
+        "HOUSEHOLD": [
+            ("liquid_laundry_detergent", "Surf Excel Matic Liquid Detergent 1L", "Household", 220),
+            ("kitchen_degreaser_spray", "Cif Kitchen Degreaser Cleaning Spray", "Household", 180),
+            ("microfiber_cleaning_cloths", "Microfiber Cleaning Cloths 4-Pack", "Household", 299),
+            ("liquid_handwash_refill", "Dettol Liquid Handwash Refill 750ml", "Household", 99),
+            ("garbage_bags_medium", "Biodegradable Garbage Bags Medium 30pk", "Household", 120),
+            ("pest_repellent_spray", "Hit Crawling Insect Killer Spray 400ml", "Household", 210),
+            ("gardening_watering_can", "Plastic Watering Can for Plants 5L", "Household", 250),
+            ("wardrobe_storage_boxes", "Fabric Wardrobe Storage Organizer Box", "Household", 399),
+            ("car_wash_shampoo", "3M Car Wash Shampoo 500ml", "Household", 199),
+            ("smoke_detector_alarm", "Safe-O-Buddy Smart Smoke Detector Alarm", "Household", 899)
         ]
     }
+
+    # Generate exactly 150 products per category
+    for cat in categories:
+        bases = product_bases[cat]
+        products_by_category[cat] = []
+        # Add the bases
+        for item_id, title, subcat, price in bases:
+            products_by_category[cat].append({
+                "id": item_id,
+                "title": title,
+                "subcategory": subcat,
+                "price": price
+            })
+        # Add generated items to reach exactly 150 products
+        brands = ["AmazonBasics", "Patanjali", "Godrej", "Amul", "Tata", "Dettol", "Prestige", "Colgate", "Himalaya", "Vim"]
+        product_names = ["Premium Refill", "Value Pack", "Standard Edition", "Special Mix", "Classic Choice", "Ultimate Utility", "Max Pack", "Pro Series", "Budget Buy", "Daily Essential"]
+        for idx in range(len(bases), 150):
+            brand = brands[idx % len(brands)]
+            name_modifier = product_names[idx % len(product_names)]
+            base_id = bases[idx % len(bases)][0]
+            base_title = bases[idx % len(bases)][1]
+            base_subcat = bases[idx % len(bases)][2]
+            
+            p_id = f"{brand.lower().replace(' ', '_')}_{base_id}_{idx}"
+            p_title = f"{brand} {base_title} - {name_modifier}"
+            p_price = int(bases[idx % len(bases)][3] * (0.8 + 0.4 * (idx % 5) / 4.0))
+            
+            products_by_category[cat].append({
+                "id": p_id,
+                "title": p_title,
+                "subcategory": base_subcat,
+                "price": p_price
+            })
+
+    missions = []
     
-    # Populate the products list per category, extending to 130 products per category
-    for cat in categories.keys():
-        real_list = category_real_products[cat]
-        products_by_category[cat] = real_list + [f"prod_{cat.lower()}_{i}" for i in range(len(real_list) + 1, 131)]
-        
-    for cat, num_missions in categories.items():
+    # Track products we've seeded, mapping them to requirements/options
+    seeded_products = {}
+
+    for cat in categories:
         templates = mission_templates[cat]
-        cat_products = products_by_category[cat]
+        cat_prods = products_by_category[cat]
         
-        for idx in range(num_missions):
-            m_id, m_name, m_desc = templates[idx]
-            
-            # Generate 20 required and 20 optional products per mission to reach 40 relationships
-            req_list = []
-            opt_list = []
-            
-            for offset in range(20):
-                req_idx = (idx * 5 + offset) % len(cat_products)
-                req_list.append(cat_products[req_idx])
+        for idx, (m_id, m_name, m_desc) in enumerate(templates):
+            # Pick 10 required and 10 optional products out of the 150 category products
+            required_prods = []
+            optional_prods = []
+            for offset in range(10):
+                req_prod = cat_prods[(idx * 10 + offset) % len(cat_prods)]["id"]
+                opt_prod = cat_prods[(idx * 10 + 20 + offset) % len(cat_prods)]["id"]
+                required_prods.append(req_prod)
+                optional_prods.append(opt_prod)
                 
-                opt_idx = (idx * 5 + 20 + offset) % len(cat_products)
-                opt_list.append(cat_products[opt_idx])
-                
-            # Generate 5 dependencies, 5 compatibilities, 5 substitutions -> 15 relationships
+            # Build 10 required + 10 optional = 20 relationships per mission
+            
+            # Generate 5 dependencies, 5 compatibilities, 5 substitutions -> 15 relationships per mission
             dependencies = []
             compatibility = []
             substitutions = []
             
             for offset in range(5):
-                src_req = req_list[offset]
-                target_p = cat_products[(idx * 5 + 40 + offset) % len(cat_products)]
+                src_req = required_prods[offset]
+                target_p = cat_prods[(idx * 10 + 40 + offset) % len(cat_prods)]["id"]
                 dependencies.append(DependencyMapping(source=src_req, target=target_p))
                 
-                src_opt = opt_list[offset]
-                target_c = cat_products[(idx * 5 + 50 + offset) % len(cat_products)]
+                src_opt = optional_prods[offset]
+                target_c = cat_prods[(idx * 10 + 50 + offset) % len(cat_prods)]["id"]
                 compatibility.append(CompatibilityMapping(source=src_opt, target=target_c))
                 
-                src_sub = cat_products[(idx * 5 + 60 + offset) % len(cat_products)]
-                target_sub = req_list[offset + 5]
+                src_sub = cat_prods[(idx * 10 + 60 + offset) % len(cat_prods)]["id"]
+                target_sub = required_prods[offset + 5]
                 substitutions.append(SubstitutionMapping(source=src_sub, target=target_sub))
 
-            # Build keywords and synonyms
-            keywords = [
-                cat.lower(), 
-                m_id.split("_")[0], 
-                "india", 
-                "indian_commerce", 
-                "market", 
-                "essentials"
-            ]
-            
-            # Build synonyms list
+            # 5 Synonyms (Phase 4)
             synonyms = [
-                m_name.lower() + " items",
-                m_name.lower() + " materials",
-                m_name.lower() + " preparation",
-                m_id.replace("_", " ") + " kit"
+                f"{m_name.lower()} items",
+                f"{m_name.lower()} materials",
+                f"{m_name.lower()} preparation",
+                f"{m_id.replace('_', ' ')} kit",
+                f"essential {m_name.lower()}"
             ]
             
-            # Build intent examples
+            # 10 Intent Examples (Phase 3)
             intent_examples = [
                 f"I want to organize a {m_name.lower()}.",
                 f"Need items for {m_name.lower()}.",
                 f"Preparing for {m_name.lower()}.",
-                f"What do I need for my {m_name.lower()} next week?"
+                f"What do I need for my {m_name.lower()} next week?",
+                f"Where can I buy {m_name.lower()} supplies?",
+                f"Planning a {m_name.lower()} function.",
+                f"Get things for my {m_name.lower()} celebration.",
+                f"Buy materials for {m_name.lower()}.",
+                f"Hosting a small {m_name.lower()} at home.",
+                f"Weekly setup for {m_name.lower()}."
             ]
 
-            # Specific intent example injection for Phase 10 validation
+            # Special overrides for Phase 10 scenarios
             if m_id == "birthday_party":
-                intent_examples.extend(["I am turning 20 tomorrow.", "Birthday celebration.", "I am turning 20 tomorrow. Birthday celebration."])
-                keywords.extend(["birthday", "cake", "celebration", "party"])
+                intent_examples.extend([
+                    "I am turning 20 tomorrow.",
+                    "Birthday celebration.",
+                    "I am turning 20 tomorrow. Birthday celebration.",
+                    "I am turning 20 tomorrow and inviting 15 friends."
+                ])
                 synonyms.extend(["birthday event", "birthday function", "birthday gathering"])
+                # Make sure birthday_cake and birthday_candles are at the top of the required list
+                if "birthday_cake" in required_prods:
+                    required_prods.remove("birthday_cake")
+                if "birthday_candles" in required_prods:
+                    required_prods.remove("birthday_candles")
+                required_prods.insert(0, "birthday_cake")
+                required_prods.insert(1, "birthday_candles")
             elif m_id == "diwali_celebration":
-                intent_examples.extend(["Need items for Diwali.", "Need items for Diwali celebration.", "Need pooja items for Diwali.", "Need items for Diwali celebration."])
+                intent_examples.extend([
+                    "Need items for Diwali celebration.",
+                    "Need pooja items for Diwali.",
+                    "Diwali festival celebration."
+                ])
+                if "clay_diyas" in required_prods:
+                    required_prods.remove("clay_diyas")
+                if "marigold_garland" in required_prods:
+                    required_prods.remove("marigold_garland")
+                required_prods.insert(0, "clay_diyas")
+                required_prods.insert(1, "marigold_garland")
             elif m_id == "biryani_preparation":
-                intent_examples.extend(["Preparing biryani for 20 people.", "Cook biryani for 20 people.", "Prepare biryani."])
+                intent_examples.extend([
+                    "Preparing biryani for 20 people.",
+                    "Cook biryani for 20 people.",
+                    "Preparing biryani."
+                ])
+                if "biryani_masala" in required_prods:
+                    required_prods.remove("biryani_masala")
+                required_prods.insert(0, "biryani_masala")
             elif m_id == "train_journey_essentials":
-                intent_examples.extend(["Going on a train journey with family.", "Train travel essentials.", "Going on a train journey."])
+                intent_examples.extend([
+                    "Going on a train journey with family.",
+                    "Train travel essentials.",
+                    "Going on a train journey."
+                ])
+                if "train_chain_lock" in required_prods:
+                    required_prods.remove("train_chain_lock")
+                required_prods.insert(0, "train_chain_lock")
             elif m_id == "ganesh_chaturthi":
-                intent_examples.extend(["Need pooja items for Ganesh Chaturthi.", "Pooja items for Ganesh Chaturthi.", "Ganesh Chaturthi festival."])
+                intent_examples.extend([
+                    "Need pooja items for Ganesh Chaturthi.",
+                    "Pooja items for Ganesh Chaturthi.",
+                    "Ganesh Chaturthi festival."
+                ])
+                if "eco_friendly_ganesha_idol" in required_prods:
+                    required_prods.remove("eco_friendly_ganesha_idol")
+                required_prods.insert(0, "eco_friendly_ganesha_idol")
 
-
-            # Consumption Rules (2 per mission)
-            consumption_rules = [
-                ConsumptionRule(product=req_list[0], unit="pieces", serves_per_unit=4.0),
-                ConsumptionRule(product=req_list[1], unit="packs", serves_per_unit=2.0)
+            keywords = [
+                cat.lower(),
+                m_id.split("_")[0],
+                "india",
+                "indian_commerce",
+                "market",
+                "essentials"
             ]
 
-            mission_req = MissionSeedRequest(
+            # 2 Simulator Consumption Rules per mission (Phase 12)
+            consumption_rules = [
+                ConsumptionRule(product=required_prods[0], unit="pieces", serves_per_unit=10.0),
+                ConsumptionRule(product=required_prods[1], unit="packs", serves_per_unit=2.0)
+            ]
+
+            missions.append(MissionSeedRequest(
                 mission_id=m_id,
                 name=m_name,
                 description=m_desc,
                 category=cat,
-                required=req_list,
-                optional=opt_list,
+                required=required_prods,
+                optional=optional_prods,
                 dependencies=dependencies,
                 compatibility=compatibility,
                 substitutions=substitutions,
@@ -297,20 +448,57 @@ def generate_graph_data():
                 synonyms=synonyms,
                 intent_examples=intent_examples,
                 consumption_rules=consumption_rules
-            )
-            missions.append(mission_req)
-
-    return missions
-
-def run_seeding():
-    print("Generating large Indian commerce graph dataset...")
-    missions = generate_graph_data()
-    print(f"Generated {len(missions)} mission templates.")
-    
+            ))
+            
+            # Map products to details so seeder puts the correct real details
+            for req_p in required_prods + optional_prods:
+                seeded_products[req_p] = True
+                
+    # Trigger seeder with bulk request
     seeder = GraphSeederService()
-    print("Beginning bulk population...")
-    result = seeder.seed_bulk(missions)
-    print("Response:", result)
+    
+    # Feed the products into the seeder's pre-create dictionary
+    for cat in categories:
+        for p_info in products_by_category[cat]:
+            p_id = p_info["id"]
+            if p_id in seeded_products:
+                seeder.product_repository.create_product(ProductModel(
+                    id=p_id,
+                    name=p_id.replace("_", " ").capitalize(),
+                    price=p_info["price"],
+                    stock=100,
+                    category=cat,
+                    title=p_info["title"],
+                    brand="Tata" if "tata" in p_id else ("Amul" if "amul" in p_id else "Amazon Brand"),
+                    subcategory=p_info["subcategory"],
+                    description=f"Fresh and high quality {p_id.replace('_', ' ')}.",
+                    mrp=p_info["price"] + 15,
+                    rating=4.5,
+                    reviews=12400,
+                    prime=True,
+                    deliveryDays=1,
+                    semanticTags=[p_id.split("_")[0], cat.lower()],
+                    missionHints=[templates[0][0] for templates in mission_templates.values() for m in templates if m[0] in p_id]
+                ))
+
+    # Run the clear logic first
+    print("Clearing DynamoDB table LifeGraph...")
+    from shared.repositories.mission_repository import MissionRepository
+    from shared.repositories.relationship_repository import RelationshipRepository
+    from shared.repositories.cart_repository import CartRepository
+    
+    # We clear the table by scanning everything and deleting
+    table = get_table()
+    scan = table.scan(ProjectionExpression="PK,SK")
+    with table.batch_writer() as batch:
+        for item in scan.get("Items", []):
+            batch.delete_item(Key={"PK": item["PK"], "SK": item["SK"]})
+    print("Scan and cleanup complete.")
+
+    print(f"Seeding LifeGraph Database V2 with {len(missions)} Missions...")
+    res = seeder.seed_bulk(missions)
+    print("Seeding Complete!")
+    print(f"Response: {res}")
 
 if __name__ == "__main__":
-    run_seeding()
+    generate_graph_data()

@@ -22,7 +22,7 @@ class VerificationAgent(BaseAgent):
     def verify(self, data: VerificationRequest) -> VerificationResponseData:
         """
         Business Logic:
-        * Compare mission requirements against cart contents.
+        * Compare mission requirements against cart contents using V2 weights.
         * Calculate verification_score.
         """
         from graph.service import GraphService
@@ -31,28 +31,39 @@ class VerificationAgent(BaseAgent):
         graph_service = GraphService()
         cart_repository = CartRepository()
         
-        mission_requirements = graph_service.get_mission_requirements(data.missionId)
+        reqs_weighted = graph_service.get_mission_requirements_weighted(data.missionId)
         cart_items = cart_repository.get_cart_items(data.cartId)
-        cart_contents = [item.product_id for item in cart_items]
+        cart_contents = [item.product_id.lower() for item in cart_items]
 
         # Fallback to test fixtures if none found in DB
-        if not mission_requirements:
-            mission_requirements = ["Cake", "Candles", "Drinks", "Snacks"]
-        if not cart_contents:
-            cart_contents = ["Cake", "Balloons", "Drinks"]
-        
+        if not reqs_weighted:
+            reqs_weighted = [
+                {"product_id": "birthday_cake", "weight": 40, "required": True},
+                {"product_id": "birthday_candles", "weight": 20, "required": True},
+                {"product_id": "soft_drinks", "weight": 10, "required": True},
+                {"product_id": "party_hats", "weight": 2, "required": False}
+            ]
+            
         missing_items = []
+        total_required_weight = 0
+        present_required_weight = 0
+        
+        for item in reqs_weighted:
+            p_id = item["product_id"]
+            is_req = item["required"]
+            weight = item["weight"]
+            
+            if is_req:
+                total_required_weight += weight
+                if p_id.lower() in cart_contents:
+                    present_required_weight += weight
+                else:
+                    missing_items.append(p_id)
+                    
         verification_score = 100.0
-        
-        deduct_per_item = 100.0 / len(mission_requirements) if mission_requirements else 25.0
-        
-        for req in mission_requirements:
-            if req not in cart_contents:
-                missing_items.append(req)
-                verification_score -= deduct_per_item
-                
-        # Prevent negative score
-        verification_score = max(0.0, verification_score)
+        if total_required_weight > 0:
+            verification_score = (present_required_weight / total_required_weight) * 100
+            
         verification_score = int(round(verification_score))
             
         res_data = VerificationResponseData(

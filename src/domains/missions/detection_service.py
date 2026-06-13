@@ -185,12 +185,16 @@ Candidate Missions:
 {candidate_list_str}
 
 Choose the single best match from the Candidate list above.
-Return a JSON object containing:
+Apply these rules strictly:
+1. If the User Query specifically mentions a specific festival name (such as "Ganesh Chaturthi", "Diwali", "Holi", "Eid", "Christmas"), prioritize matching that specific festival mission (e.g., ganesh_chaturthi) over more general spiritual/pooja or event missions (e.g., ganesh_pooja).
+2. If the User Query specifically mentions a specific product, activity, or transport type (like "biryani", "train", "samosa", "laundry"), prioritize the specific mission centered around that item/activity (e.g., biryani_preparation, train_journey_essentials, samosa_chai_evening, home_laundry_day) rather than broader event, vacation, or category packages (like eid_celebration or family_vacation_pack).
+
+Return ONLY a valid JSON object containing exactly these fields:
 - mission_id: The exact mission_id of the chosen candidate.
 - confidence: A confidence score between 0.0 and 1.0.
 - reason: A concise explanation of why this mission matches the query.
 
-Return ONLY the raw JSON object, no Markdown boxes, code blocks, or extra text.
+Ensure that all string values in the JSON (especially the "reason" field) do not contain unescaped double quotes or invalid control characters. Do not include any markdown boxes, code blocks, or extra text.
 """
             try:
                 rerank_res = self.bedrock_client.invoke_model(rerank_prompt, model_id="amazon.nova-lite-v1:0")
@@ -199,7 +203,31 @@ Return ONLY the raw JSON object, no Markdown boxes, code blocks, or extra text.
                     lines = clean_content.split("\n")
                     if lines[0].startswith("```json") or lines[0].startswith("```"):
                         clean_content = "\n".join(lines[1:-1]).strip()
-                rerank_data = json.loads(clean_content)
+                
+                # Robust parsing block
+                rerank_data = {}
+                try:
+                    rerank_data = json.loads(clean_content)
+                except Exception as json_err:
+                    logger.warning(f"Direct JSON loads failed: {json_err}. Trying regex extraction on content: {clean_content}")
+                    m_id_match = re.search(r'"mission_id"\s*:\s*"([^"]+)"', clean_content)
+                    conf_match = re.search(r'"confidence"\s*:\s*([\d\.]+)', clean_content)
+                    reason_match = re.search(r'"reason"\s*:\s*"(.*)"', clean_content, re.DOTALL)
+                    if m_id_match:
+                        rerank_data["mission_id"] = m_id_match.group(1)
+                    if conf_match:
+                        rerank_data["confidence"] = float(conf_match.group(1))
+                    if reason_match:
+                        reason_val = reason_match.group(1).strip()
+                        # Strip trailing braces/whitespace if regex grabbed too much
+                        if reason_val.endswith('"'):
+                            reason_val = reason_val[:-1]
+                        if reason_val.endswith('}') or reason_val.endswith('}\n'):
+                            idx_brace = reason_val.rfind('"')
+                            if idx_brace != -1:
+                                reason_val = reason_val[:idx_brace]
+                        rerank_data["reason"] = reason_val
+                
                 selected_id = rerank_data.get("mission_id")
                 llm_confidence = float(rerank_data.get("confidence", 0.95))
                 rerank_reason = rerank_data.get("reason", "")

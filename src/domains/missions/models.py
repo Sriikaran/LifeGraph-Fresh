@@ -3,7 +3,7 @@ from typing import Dict, Any, List
 class MissionModel:
     def __init__(self, mission_id: str, name: str, description: str, category: str, 
                  keywords: List[str] = None, synonyms: List[str] = None, intent_examples: List[str] = None,
-                 embedding: List[float] = None):
+                 embedding: List[float] = None, expected_parameters: List[str] = None):
          self.mission_id = mission_id
          self.name = name
          self.description = description
@@ -12,6 +12,7 @@ class MissionModel:
          self.synonyms = synonyms or []
          self.intent_examples = intent_examples or []
          self.embedding = embedding or []
+         self.expected_parameters = expected_parameters or []
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'MissionModel':
@@ -26,7 +27,8 @@ class MissionModel:
             keywords=data.get('keywords', []),
             synonyms=data.get('synonyms', []),
             intent_examples=data.get('intent_examples', []),
-            embedding=embedding
+            embedding=embedding,
+            expected_parameters=data.get('expectedParameters') or data.get('expected_parameters') or []
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -36,6 +38,7 @@ class MissionModel:
         return {
             'PK': f"MISSION#{self.mission_id}",
             'SK': "METADATA",
+            'entityType': "MISSION",
             'missionId': self.mission_id,
             'mission_id': self.mission_id,
             'name': self.name,
@@ -44,6 +47,8 @@ class MissionModel:
             'keywords': self.keywords,
             'synonyms': self.synonyms,
             'intent_examples': self.intent_examples,
-            'embedding': db_embedding
+            'embedding': db_embedding,
+            'expectedParameters': self.expected_parameters,
+            'GSI2PK': f"MISSION_CATEGORY#{self.category}",
+            'GSI2SK': f"MISSION#{self.mission_id}"
         }
-
