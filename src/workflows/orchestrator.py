@@ -1,8 +1,8 @@
 from typing import Any, Dict
 from agents.base_agent import BaseAgent
-from agents.verification_agent import VerificationAgent
-from agents.risk_agent import RiskAgent
-from agents.prevention_agent import PreventionAgent
+from domains.verification.service import VerificationService
+from domains.risk.service import RiskService
+from domains.prevention.service import PreventionService
 from agents.memory_agent import MemoryAgent
 from agents.adaptive_agent import AdaptiveAgent
 from agents.simulator_agent import SimulatorAgent
@@ -11,9 +11,9 @@ from shared.schemas.engine_schemas import VerificationRequest, RiskRequest, Prev
 class OrchestratorAgent(BaseAgent):
     def __init__(self):
         super().__init__(name="OrchestratorAgent")
-        self.verification_agent = VerificationAgent()
-        self.risk_agent = RiskAgent()
-        self.prevention_agent = PreventionAgent()
+        self.verification_service = VerificationService()
+        self.risk_service = RiskService()
+        self.prevention_service = PreventionService()
         self.memory_agent = MemoryAgent()
         self.adaptive_agent = AdaptiveAgent()
         self.simulator_agent = SimulatorAgent()
@@ -38,18 +38,18 @@ class OrchestratorAgent(BaseAgent):
         
         # 2. Verification check
         verification_req = VerificationRequest(missionId=mission_id, cartId=cart_id)
-        verification_res = self.verification_agent.execute("verify", verification_req)
+        verification_res = self.verification_service.verify(verification_req)
         
         # 3. Risk check
         risk_req = RiskRequest(
             verification_score=verification_res.verification_score,
             missing_items=verification_res.missing_items
         )
-        risk_res = self.risk_agent.execute("analyze", risk_req)
+        risk_res = self.risk_service.analyze(risk_req)
         
         # 4. Prevention check
-        prevention_req = PreventionRequest(cartId=cart_id)
-        prevention_res = self.prevention_agent.execute("evaluate", prevention_req)
+        prevention_req = PreventionRequest(missionId=mission_id, cartId=cart_id)
+        prevention_res = self.prevention_service.evaluate(prevention_req)
         
         # 5. Outcome simulation
         sim_scenario = "high_risk" if risk_res.risk_score >= 70 else "normal"

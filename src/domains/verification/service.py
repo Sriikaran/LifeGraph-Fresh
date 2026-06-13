@@ -46,8 +46,31 @@ class VerificationService:
                 
         # Prevent negative score and round
         verification_score = max(0, int(round(verification_score)))
+        
+        # Calculate readiness_score
+        total_required_items = len(mission_requirements)
+        if total_required_items > 0:
+            required_items_present = total_required_items - len(missing_items)
+            readiness_score = int(round((required_items_present / total_required_items) * 100))
+        else:
+            readiness_score = 100
+            
+        # Generate recommended additions
+        recommended_additions = []
+        for missing in missing_items:
+            try:
+                substitutes = self.graph_service.get_product_substitutes(missing)
+                if substitutes:
+                    recommended_additions.extend(substitutes)
+            except Exception:
+                pass
+                
+        # Deduplicate recommendations
+        recommended_additions = list(set(recommended_additions))
             
         return VerificationResponseData(
             verification_score=verification_score,
-            missing_items=missing_items
+            missing_items=missing_items,
+            readiness_score=readiness_score,
+            recommended_additions=recommended_additions
         )

@@ -10,6 +10,7 @@ from api.controllers.verification_controller import VerificationController
 from api.controllers.risk_controller import RiskController
 from api.controllers.prevention_controller import PreventionController
 from api.controllers.mission_controller import MissionController
+from domains.mission_detection.controller import MissionDetectionController
 from api.controllers.relationship_controller import RelationshipController
 from api.controllers.graph_controller import GraphController
 from api.controllers.workflow_controller import WorkflowController
@@ -46,6 +47,7 @@ verification_ctrl = VerificationController()
 risk_ctrl = RiskController()
 prevention_ctrl = PreventionController()
 mission_ctrl = MissionController()
+mission_detection_ctrl = MissionDetectionController()
 relationship_ctrl = RelationshipController()
 graph_ctrl = GraphController()
 workflow_ctrl = WorkflowController()
@@ -470,6 +472,16 @@ async def execute_mission(payload: MissionExecutionRequest, request: Request, re
     event = await create_event(request, payload)
     try:
         res = orchestrator_ctrl.execute_mission(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+# --- Mission Detection ---
+@app.post("/detect-mission")
+async def detect_mission(request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = mission_detection_ctrl.detect_mission(event)
         return handle_controller_response(response, res)
     except Exception as e:
         return handle_exception(e, response)

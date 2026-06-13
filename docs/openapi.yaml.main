@@ -1,0 +1,788 @@
+﻿openapi: 3.0.0
+info:
+  title: Amazon LifeGraph API
+  version: 1.0.0
+  description: Phase 2.5 API documentation with Swagger UI for verification.
+servers:
+  - url: /Prod
+components:
+  schemas:
+    SuccessEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+    ErrorEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+    UserCreate:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          example: John Doe
+        email:
+          type: string
+          example: john.doe@example.com
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+    UserResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/User'
+    UserListResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+    ProductCreate:
+      type: object
+      required:
+        - name
+        - price
+        - stock
+        - category
+      properties:
+        name:
+          type: string
+          example: Birthday Cake
+        price:
+          type: number
+          example: 25.5
+        stock:
+          type: integer
+          example: 10
+        category:
+          type: string
+          example: Food
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+        stock:
+          type: integer
+        category:
+          type: string
+    ProductResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Product'
+    ProductListResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Product'
+    CartItem:
+      type: object
+      properties:
+        product_id:
+          type: string
+        quantity:
+          type: integer
+    CartCreate:
+      type: object
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: string
+    CartAddItem:
+      type: object
+      required:
+        - product_id
+        - quantity
+      properties:
+        product_id:
+          type: string
+        quantity:
+          type: integer
+    Cart:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        status:
+          type: string
+        total:
+          type: number
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+    CartResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Cart'
+    CartListResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Cart'
+<<<<<<< HEAD
+    VerificationRequest:
+      type: object
+      required:
+        - missionId
+        - cartId
+      properties:
+        missionId:
+          type: string
+        cartId:
+          type: string
+    VerificationResponse:
+=======
+    MissionCreate:
+      type: object
+      required:
+        - mission_id
+        - name
+        - description
+        - category
+      properties:
+        mission_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+    Mission:
+      type: object
+      properties:
+        mission_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+    MissionResponse:
+>>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+<<<<<<< HEAD
+              type: object
+              properties:
+                verification_score:
+                  type: integer
+                missing_items:
+                  type: array
+                  items:
+                    type: string
+    RiskRequest:
+      type: object
+      required:
+        - verification_score
+        - missing_items
+      properties:
+        verification_score:
+          type: integer
+        missing_items:
+          type: array
+          items:
+            type: string
+    RiskResponse:
+=======
+              $ref: '#/components/schemas/Mission'
+    MissionListResponse:
+>>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+<<<<<<< HEAD
+              type: object
+              properties:
+                compatibility_risk:
+                  type: string
+                budget_risk:
+                  type: string
+                quantity_risk:
+                  type: string
+                timing_risk:
+                  type: string
+                risk_score:
+                  type: integer
+    PreventionRequest:
+      type: object
+      required:
+        - cartId
+      properties:
+        cartId:
+          type: string
+    PreventionResponse:
+=======
+              type: array
+              items:
+                $ref: '#/components/schemas/Mission'
+    RelationshipCreate:
+      type: object
+      required:
+        - source_type
+        - source_id
+        - target_type
+        - target_id
+        - relationship_type
+      properties:
+        source_type:
+          type: string
+        source_id:
+          type: string
+        target_type:
+          type: string
+        target_id:
+          type: string
+        relationship_type:
+          type: string
+          enum: [REQUIRES, DEPENDS_ON, COMPATIBLE_WITH, SUBSTITUTES_FOR, PART_OF_MISSION]
+    Relationship:
+      type: object
+      properties:
+        id:
+          type: string
+        source_type:
+          type: string
+        source_id:
+          type: string
+        target_type:
+          type: string
+        target_id:
+          type: string
+        relationship_type:
+          type: string
+    RelationshipResponse:
+>>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+<<<<<<< HEAD
+              type: object
+              properties:
+                allow_checkout:
+                  type: boolean
+                reason:
+                  type: string
+=======
+              $ref: '#/components/schemas/Relationship'
+    RelationshipListResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Relationship'
+    StringListResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: string
+>>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
+paths:
+  /users:
+    get:
+      summary: List Users
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+    post:
+      summary: Create User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get User
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    put:
+      summary: Update User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          description: User not found
+    delete:
+      summary: Delete User
+      responses:
+        '200':
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+  /products:
+    get:
+      summary: List Products
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+    post:
+      summary: Create Product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreate'
+      responses:
+        '201':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+  /products/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get Product
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+    put:
+      summary: Update Product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreate'
+      responses:
+        '200':
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+    delete:
+      summary: Delete Product
+      responses:
+        '200':
+          description: Product deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+  /carts:
+    get:
+      summary: List Carts
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of carts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartListResponse'
+    post:
+      summary: Create Cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartCreate'
+      responses:
+        '201':
+          description: Cart created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+  /carts/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get Cart
+      responses:
+        '200':
+          description: Cart details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+    put:
+      summary: Update Cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartCreate'
+      responses:
+        '200':
+          description: Cart updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+    delete:
+      summary: Delete Cart
+      responses:
+        '200':
+          description: Cart deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+  /carts/{id}/items:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Add Item to Cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartAddItem'
+      responses:
+        '200':
+          description: Item added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+<<<<<<< HEAD
+  /verification/verify:
+    post:
+      summary: Verify Cart
+=======
+  /missions:
+    get:
+      summary: List Missions
+      responses:
+        '200':
+          description: List of missions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MissionListResponse'
+    post:
+      summary: Create Mission
+>>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+<<<<<<< HEAD
+              $ref: '#/components/schemas/VerificationRequest'
+      responses:
+        '200':
+          description: Verification complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationResponse'
+  /risk/analyze:
+    post:
+      summary: Analyze Risk
+=======
+              $ref: '#/components/schemas/MissionCreate'
+      responses:
+        '201':
+          description: Mission created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MissionResponse'
+  /missions/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get Mission
+      responses:
+        '200':
+          description: Mission details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MissionResponse'
+    put:
+      summary: Update Mission
+>>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+<<<<<<< HEAD
+              $ref: '#/components/schemas/RiskRequest'
+      responses:
+        '200':
+          description: Risk analysis complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskResponse'
+  /prevent-checkout:
+    post:
+      summary: Evaluate Prevention
+=======
+              $ref: '#/components/schemas/MissionCreate'
+      responses:
+        '200':
+          description: Mission updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MissionResponse'
+    delete:
+      summary: Delete Mission
+      responses:
+        '200':
+          description: Mission deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+  /relationships:
+    get:
+      summary: List Relationships
+      responses:
+        '200':
+          description: List of relationships
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipListResponse'
+    post:
+      summary: Create Relationship
+>>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+<<<<<<< HEAD
+              $ref: '#/components/schemas/PreventionRequest'
+      responses:
+        '200':
+          description: Evaluation complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreventionResponse'
+=======
+              $ref: '#/components/schemas/RelationshipCreate'
+      responses:
+        '201':
+          description: Relationship created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipResponse'
+  /relationships/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    delete:
+      summary: Delete Relationship
+      responses:
+        '200':
+          description: Relationship deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+  /missions/{id}/requirements:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get Mission Requirements
+      responses:
+        '200':
+          description: List of required product IDs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StringListResponse'
+  /products/{id}/dependencies:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get Product Dependencies
+      responses:
+        '200':
+          description: List of product IDs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StringListResponse'
+  /products/{id}/substitutes:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get Product Substitutes
+      responses:
+        '200':
+          description: List of product IDs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StringListResponse'
+>>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
