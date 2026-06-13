@@ -1,8 +1,9 @@
 import uuid
 from typing import Optional
 from domains.users.repository import UserRepository
+from domains.users.repository import UserRepository
 from domains.users.models import UserModel
-from domains.users.schemas import UserCreate
+from domains.users.schemas import UserCreate, UserUpdate
 from core.exceptions import NotFoundException
 
 class UserService:
@@ -20,10 +21,12 @@ class UserService:
             raise NotFoundException("User", user_id)
         return user
 
-    def update_user(self, user_id: str, data: UserCreate) -> UserModel:
+    def update_user(self, user_id: str, data: UserUpdate) -> UserModel:
         user = self.get_user(user_id)
-        user.name = data.name
-        user.email = data.email
+        if data.name is not None:
+            user.name = data.name
+        if data.email is not None:
+            user.email = data.email
         return self.repository.update_user(user)
 
     def delete_user(self, user_id: str) -> None:

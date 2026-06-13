@@ -1,8 +1,9 @@
 import uuid
 from typing import List
 from domains.products.repository import ProductRepository
+from domains.products.repository import ProductRepository
 from domains.products.models import ProductModel
-from domains.products.schemas import ProductCreate
+from domains.products.schemas import ProductCreate, ProductUpdate
 from core.exceptions import NotFoundException
 
 class ProductService:
@@ -26,12 +27,16 @@ class ProductService:
             raise NotFoundException("Product", product_id)
         return product
 
-    def update_product(self, product_id: str, data: ProductCreate) -> ProductModel:
+    def update_product(self, product_id: str, data: ProductUpdate) -> ProductModel:
         product = self.get_product(product_id)
-        product.name = data.name
-        product.price = data.price
-        product.stock = data.stock
-        product.category = data.category
+        if data.name is not None:
+            product.name = data.name
+        if data.price is not None:
+            product.price = data.price
+        if data.stock is not None:
+            product.stock = data.stock
+        if data.category is not None:
+            product.category = data.category
         return self.repository.update_product(product)
 
     def delete_product(self, product_id: str) -> None:

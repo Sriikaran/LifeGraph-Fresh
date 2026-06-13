@@ -17,7 +17,7 @@ class UserModel:
     def to_dict(self) -> Dict[str, Any]:
         return {
             'PK': f"USER#{self.id}",
-            'SK': f"METADATA#{self.id}",
+            'SK': "METADATA",
             'id': self.id,
             'name': self.name,
             'email': self.email
