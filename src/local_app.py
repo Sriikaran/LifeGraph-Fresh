@@ -356,6 +356,25 @@ async def evaluate(request: Request, response: Response, payload: PreventionRequ
     except Exception as e:
         return handle_exception(e, response)
 
+# --- Mission Detection ---
+from domains.missions.detection_service import DetectionService
+
+detection_service = DetectionService()
+
+class DetectionRequest(BaseModel):
+    query: str
+
+@app.post("/mission/detect")
+async def detect_mission(payload: DetectionRequest, response: Response):
+    try:
+        res = detection_service.detect_mission(payload.query)
+        if not res.get("success", False):
+            response.status_code = 400
+        return res
+    except Exception as e:
+        response.status_code = 500
+        return {"success": False, "error": str(e)}
+
 # --- Missions ---
 @app.get("/missions")
 async def list_missions(request: Request, response: Response):

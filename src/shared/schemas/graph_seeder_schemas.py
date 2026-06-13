@@ -32,6 +32,8 @@ class MissionSeedRequest(BaseModel):
     substitutions: Optional[List[SubstitutionMapping]] = []
     
     keywords: Optional[List[str]] = []
+    synonyms: Optional[List[str]] = []
+    intent_examples: Optional[List[str]] = []
     consumption_rules: Optional[List[ConsumptionRule]] = []
 
 class BulkMissionSeedRequest(BaseModel):

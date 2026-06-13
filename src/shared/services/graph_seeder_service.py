@@ -32,7 +32,10 @@ class GraphSeederService:
                 "mission_id": req.mission_id,
                 "name": req.name,
                 "description": req.description,
-                "category": req.category
+                "category": req.category,
+                "keywords": req.keywords or [],
+                "synonyms": req.synonyms or [],
+                "intent_examples": req.intent_examples or []
             })
 
             # Gather all products referenced in this mission
