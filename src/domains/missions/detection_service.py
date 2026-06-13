@@ -3,7 +3,6 @@ import logging
 import re
 from typing import Dict, Any, List, Tuple
 
-
 from infrastructure.bedrock.client import BedrockClient
 from shared.repositories.mission_repository import MissionRepository
 from graph.service import GraphService
@@ -28,6 +27,10 @@ class DetectionService:
 
     def _get_or_create_mission_embedding(self, mission: Any) -> List[float]:
         """Gets cached embedding for a mission or generates a new one."""
+        # Phase 2: Pull pre-computed embedding from DynamoDB if present
+        if hasattr(mission, "embedding") and mission.embedding:
+            return mission.embedding
+            
         mission_id = mission.mission_id
         if mission_id in _MISSION_EMBEDDINGS_CACHE:
             return _MISSION_EMBEDDINGS_CACHE[mission_id]
@@ -48,16 +51,19 @@ class DetectionService:
 
     def detect_mission(self, query: str) -> Dict[str, Any]:
         """
-        Executes the 5-step Semantic Mission Detection Pipeline:
+        Executes the Semantic Mission Detection Pipeline:
         1. Bedrock Intent Understanding
-        2. Generate query embedding
-        3. Semantic Retrieval (Top 10 closest)
-        4. Re-Ranking (Claude choice)
-        5. Graph Validation
+        2. Generate query embedding (Phase 3)
+        3. Semantic Retrieval (Phase 4: vector-only similarity retrieval, no keyword overlap)
+        4. Re-Ranking / Fallback (Phase 5 & 9: Claude re-ranking or Titan + Graph fallback)
+        5. Graph Validation Layer (Phase 6: validate candidates loop)
+        6. Context Extraction (Phase 7: guest_count, audience, event_date)
+        7. Confidence Scoring (Phase 8: weighted combination score)
         """
         logger.info(f"Detecting mission for query: '{query}'")
+        query_lower = query.lower()
 
-        # Step 1: Bedrock Intent Understanding
+        # Step 1: Bedrock Intent Understanding (or mock extraction)
         intent_prompt = f"""You are an expert intent extractor for Indian e-commerce.
 Analyze the user's shopping intent query: "{query}"
 
@@ -74,65 +80,99 @@ Return ONLY the valid JSON object, no other explanation or wrapper tags.
             intent_data = json.loads(intent_res.content)
         except Exception as e:
             logger.error(f"Step 1 (Intent Understanding) failed: {e}")
-            intent_data = {"goal": "general shopping", "guest_count": 1, "event_type": "grocery", "audience": "family"}
+            intent_data = {"goal": "general shopping", "guest_count": 1, "event_type": "grocery", "audience": "adults"}
 
-        # Extract parameters for Phase 5
+        # --- Phase 7: Context Parameter Extraction ---
+        # Extract guest count
+        guest_count = None
+        key_match = re.search(r'(?:people|guests|persons|pax|members|count)\s*[:=]\s*(\d+)', query_lower)
+        if key_match:
+            guest_count = int(key_match.group(1))
+        
+        # Check turning age to avoid misinterpreting it as guest count
+        age = None
+        turning_match = re.search(r'turning\s*(\d+)', query_lower) or re.search(r'turned\s*(\d+)', query_lower)
+        if turning_match:
+            age = int(turning_match.group(1))
+
+        if guest_count is None:
+            suffix_match = re.search(r'(\d+)\s*(?:people|person|guest|children|child|kid|adult|member|pax)', query_lower)
+            if suffix_match:
+                guest_count = int(suffix_match.group(1))
+
+        if guest_count is None:
+            num_match = re.findall(r'\b\d+\b', query_lower)
+            if num_match:
+                candidates_nums = []
+                for n_str in num_match:
+                    n = int(n_str)
+                    if age is not None and n == age:
+                        continue
+                    if n >= 100:  # Skip typical budget values
+                        continue
+                    candidates_nums.append(n)
+                if candidates_nums:
+                    guest_count = candidates_nums[0]
+
+        if guest_count is None:
+            guest_count = intent_data.get("guest_count", 1)
+
+        # Extract audience
+        audience = "adults"
+        if age is not None:
+            audience = "children" if age < 13 else "adults"
+        elif "children" in query_lower or "kid" in query_lower or "child" in query_lower or "kids" in query_lower:
+            audience = "children"
+        else:
+            audience = intent_data.get("audience", "adults")
+
+        # Extract event date (Phase 7)
+        event_date = None
+        date_match = re.search(r'(tomorrow|next\s+[a-zA-Z]+|this\s+[a-zA-Z]+|on\s+[a-zA-Z]+|today)', query_lower)
+        if date_match:
+            event_date = date_match.group(1).strip()
+
         parameters = {
-            "guest_count": intent_data.get("guest_count", 1),
-            "audience": intent_data.get("audience", "family")
+            "guest_count": guest_count,
+            "audience": audience
         }
+        if event_date:
+            parameters["event_date"] = event_date
 
-        # Step 2: Generate embedding for User Query
+        # --- Phase 3: User Intent Embedding ---
         query_embedding = self.bedrock_client.generate_embeddings(query)
 
-        # Step 3: Semantic Retrieval (Retrieve Top 10 closest missions)
+        # --- Phase 4: Semantic Mission Retrieval (top 10 by pure cosine similarity) ---
         all_missions = self.mission_repository.list_missions()
         if not all_missions:
-            # Re-seed default or return empty
             return {
                 "success": False,
                 "error": "No missions found in library. Run seeder first."
             }
 
         candidates_with_score: List[Tuple[Any, float]] = []
-        query_words = set(re.findall(r'\w+', query.lower()))
-        
         for mission in all_missions:
             mission_embedding = self._get_or_create_mission_embedding(mission)
             score = self._get_cosine_similarity(query_embedding, mission_embedding)
-            
-            # Hybrid search lexical boost: boost candidates that share exact name/keyword tokens with the query
-            boost = 0.0
-            name_words = set(re.findall(r'\w+', mission.name.lower()))
-            id_words = set(mission.mission_id.lower().split('_'))
-            
-            # Name & ID overlap
-            overlap = query_words.intersection(name_words.union(id_words))
-            boost += len(overlap) * 2.0
-            
-            # Keywords and synonyms overlap
-            for kw in mission.keywords:
-                if kw.lower() in query_words:
-                    boost += 1.0
-            for syn in mission.synonyms:
-                syn_words = set(re.findall(r'\w+', syn.lower()))
-                if syn_words.issubset(query_words):
-                    boost += 1.5
-                    
-            candidates_with_score.append((mission, score + boost))
+            candidates_with_score.append((mission, score))
 
-        # Sort candidates descending by similarity score
+        # Sort descending by pure cosine similarity
         candidates_with_score.sort(key=lambda x: x[1], reverse=True)
         top_candidates = candidates_with_score[:10]
 
-        # Step 4: Mission Re-Ranking using Claude
-        candidate_list_str = "\n".join([
-            f"- mission_id: \"{m.mission_id}\", name: \"{m.name}\", description: \"{m.description}\""
-            for m, _ in top_candidates
-        ])
+        # --- Phase 5 & 9: Bedrock Re-Ranking / Fallback Layer ---
+        claude_available = self.bedrock_client.check_claude_available()
+        selected_id = None
+        llm_confidence = 0.85 # Fallback LLM confidence
+        rerank_reason = "Bypassed LLM re-ranking due to Claude unavailability (Phase 9 fallback)."
 
-        rerank_prompt = f"""You are a smart catalog selector. We need to match a user query to the most appropriate pre-defined mission catalog.
+        if claude_available:
+            candidate_list_str = "\n".join([
+                f"- mission_id: \"{m.mission_id}\", name: \"{m.name}\", description: \"{m.description}\""
+                for m, _ in top_candidates
+            ])
 
+            rerank_prompt = f"""You are a mission classification engine.
 User Query: "{query}"
 Extracted Goal: "{intent_data.get('goal')}"
 
@@ -147,58 +187,82 @@ Return a JSON object containing:
 
 Return ONLY the raw JSON object, no Markdown boxes, code blocks, or extra text.
 """
-        try:
-            rerank_res = self.bedrock_client.invoke_model(rerank_prompt)
-            # Strip markdown block wrappers if LLM returned them
-            clean_content = rerank_res.content.strip()
-            if clean_content.startswith("```"):
-                lines = clean_content.split("\n")
-                if lines[0].startswith("```json") or lines[0].startswith("```"):
-                    clean_content = "\n".join(lines[1:-1]).strip()
-            rerank_data = json.loads(clean_content)
-        except Exception as e:
-            logger.error(f"Step 4 (Re-Ranking) failed: {e}")
-            # Fallback to the top candidate from cosine similarity
-            best_cand = top_candidates[0][0]
-            rerank_data = {
-                "mission_id": best_cand.mission_id,
-                "confidence": 0.85,
-                "reason": "Fallback to similarity match due to re-ranking error."
-            }
+            try:
+                rerank_res = self.bedrock_client.invoke_model(rerank_prompt)
+                clean_content = rerank_res.content.strip()
+                if clean_content.startswith("```"):
+                    lines = clean_content.split("\n")
+                    if lines[0].startswith("```json") or lines[0].startswith("```"):
+                        clean_content = "\n".join(lines[1:-1]).strip()
+                rerank_data = json.loads(clean_content)
+                selected_id = rerank_data.get("mission_id")
+                llm_confidence = float(rerank_data.get("confidence", 0.95))
+                rerank_reason = rerank_data.get("reason", "")
+            except Exception as e:
+                logger.error(f"Re-Ranking failed: {e}. Falling back to Phase 9 mode.")
+                selected_id = None
 
-        selected_id = rerank_data.get("mission_id")
-        
-        # Step 5: Graph Validation
-        # Check if the mission exists in database
-        db_mission = self.mission_repository.get_mission(selected_id)
-        if not db_mission:
-            # Fallback to first available candidate in top_candidates that is in database
-            db_mission = None
-            for cand, _ in top_candidates:
-                exists = self.mission_repository.get_mission(cand.mission_id)
-                if exists:
-                    db_mission = exists
-                    selected_id = exists.mission_id
+        # Build candidate ranked search order list
+        ranked_missions = []
+        if selected_id:
+            # Place Claude selected candidate first
+            chosen_tuple = None
+            for m, sim in top_candidates:
+                if m.mission_id == selected_id:
+                    chosen_tuple = (m, sim)
+                    break
+            if chosen_tuple:
+                ranked_missions.append(chosen_tuple)
+                for item in top_candidates:
+                    if item[0].mission_id != selected_id:
+                        ranked_missions.append(item)
+            else:
+                ranked_missions = top_candidates
+        else:
+            ranked_missions = top_candidates
+
+        # --- Phase 6: Graph Validation Layer loop ---
+        validated_mission = None
+        final_similarity = 0.0
+        requirements = []
+
+        for m, sim in ranked_missions:
+            db_m = self.mission_repository.get_mission(m.mission_id)
+            if db_m:
+                reqs = self.graph_service.get_mission_requirements(m.mission_id)
+                # Verify required products exist and has relations
+                if reqs and len(reqs) > 0:
+                    validated_mission = db_m
+                    final_similarity = sim
+                    requirements = reqs
                     break
 
-        if not db_mission:
-            # Fallback to the first mission in the database
-            db_mission = all_missions[0]
-            selected_id = db_mission.mission_id
+        if not validated_mission:
+            # Complete validation fallback to first candidate
+            validated_mission = top_candidates[0][0]
+            final_similarity = top_candidates[0][1]
+            requirements = self.graph_service.get_mission_requirements(validated_mission.mission_id)
 
-        # Verify requirements/products from Graph Service
-        requirements = self.graph_service.get_mission_requirements(selected_id)
-        is_complete = len(requirements) > 0
+        # --- Phase 8: Confidence Scoring ---
+        semantic_similarity = final_similarity
+        graph_score = 1.0 if (requirements and len(requirements) > 0) else 0.0
+        
+        final_confidence = (
+            (semantic_similarity * 0.60)
+            + (llm_confidence * 0.25)
+            + (graph_score * 0.15)
+        )
+        final_confidence = round(final_confidence, 2)
 
         return {
             "success": True,
-            "mission_id": selected_id,
-            "confidence": rerank_data.get("confidence", 0.95),
-            "reason": rerank_data.get("reason", ""),
+            "mission_id": validated_mission.mission_id,
+            "confidence": final_confidence,
+            "reason": rerank_reason,
             "parameters": parameters,
             "validation": {
                 "exists": True,
-                "graph_complete": is_complete,
+                "graph_complete": graph_score > 0,
                 "required_products_count": len(requirements)
             }
         }

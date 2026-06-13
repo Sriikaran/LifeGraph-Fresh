@@ -34,6 +34,7 @@ class MissionSeedRequest(BaseModel):
     keywords: Optional[List[str]] = []
     synonyms: Optional[List[str]] = []
     intent_examples: Optional[List[str]] = []
+    embedding: Optional[List[float]] = []
     consumption_rules: Optional[List[ConsumptionRule]] = []
 
 class BulkMissionSeedRequest(BaseModel):

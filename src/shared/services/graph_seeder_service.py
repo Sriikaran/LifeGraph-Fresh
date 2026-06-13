@@ -24,7 +24,20 @@ class GraphSeederService:
         products_to_create: Dict[str, ProductModel] = {}
         items_to_write: List[Dict[str, Any]] = []
 
+        from infrastructure.bedrock.client import BedrockClient
+        from decimal import Decimal
+        bedrock = BedrockClient()
+
         for req in missions:
+            # Generate the embedding input text (Phase 2): Name + Description + Intent Examples + Keywords + Synonyms
+            combined_text = f"{req.name}\n\n{req.description}\n\n"
+            combined_text += "\n".join(req.intent_examples or []) + "\n\n"
+            combined_text += " ".join(req.keywords or []) + "\n"
+            combined_text += " ".join(req.synonyms or [])
+            
+            embedding = req.embedding or bedrock.generate_embeddings(combined_text)
+            db_embedding = [Decimal(str(x)) for x in embedding]
+
             # 1. Mission Metadata Node
             items_to_write.append({
                 "PK": f"MISSION#{req.mission_id}",
@@ -35,7 +48,8 @@ class GraphSeederService:
                 "category": req.category,
                 "keywords": req.keywords or [],
                 "synonyms": req.synonyms or [],
-                "intent_examples": req.intent_examples or []
+                "intent_examples": req.intent_examples or [],
+                "embedding": db_embedding
             })
 
             # Gather all products referenced in this mission

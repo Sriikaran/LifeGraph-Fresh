@@ -12,44 +12,65 @@ from domains.carts.models import CartModel, CartItemModel
 
 client = TestClient(app)
 
-def test_semantic_mission_detection_birthday():
-    """Verify that a birthday query is resolved to an appropriate Indian mission and parameters are extracted."""
+def test_semantic_mission_detection_birthday_party():
+    """Verify scenario: I am turning 20 tomorrow."""
     payload = {
-        "query": "My daughter's birthday party is next Sunday and around 20 guests will attend."
+        "query": "I am turning 20 tomorrow."
     }
     response = client.post("/mission/detect", json=payload)
     assert response.status_code == 200
-    
     data = response.json()
     assert data["success"] is True
-    assert data["mission_id"] in ["birthday_party", "kids_birthday_party"]
-    assert data["parameters"]["guest_count"] == 20
-    assert data["validation"]["graph_complete"] is True
+    assert data["mission_id"] == "birthday_party"
+    assert data["parameters"]["event_date"] == "tomorrow"
+    assert data["confidence"] > 0.0
 
 def test_semantic_mission_detection_diwali():
-    """Verify that Diwali query is resolved to Diwali mission."""
+    """Verify scenario: Need items for Diwali celebration."""
     payload = {
-        "query": "Need some pooja items for Diwali celebration"
+        "query": "Need items for Diwali celebration."
     }
     response = client.post("/mission/detect", json=payload)
     assert response.status_code == 200
-    
     data = response.json()
     assert data["success"] is True
     assert data["mission_id"] == "diwali_celebration"
     assert data["validation"]["required_products_count"] > 0
 
-def test_semantic_mission_detection_train():
-    """Verify that train query resolves to train journey essentials."""
+def test_semantic_mission_detection_biryani():
+    """Verify scenario: Preparing biryani for 20 people."""
     payload = {
-        "query": "Going on a train journey next weekend with family"
+        "query": "Preparing biryani for 20 people."
     }
     response = client.post("/mission/detect", json=payload)
     assert response.status_code == 200
-    
+    data = response.json()
+    assert data["success"] is True
+    assert data["mission_id"] == "biryani_preparation"
+    assert data["parameters"]["guest_count"] == 20
+
+def test_semantic_mission_detection_train():
+    """Verify scenario: Going on a train journey with family."""
+    payload = {
+        "query": "Going on a train journey with family."
+    }
+    response = client.post("/mission/detect", json=payload)
+    assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
     assert data["mission_id"] == "train_journey_essentials"
+
+def test_semantic_mission_detection_ganesh():
+    """Verify scenario: Need pooja items for Ganesh Chaturthi."""
+    payload = {
+        "query": "Need pooja items for Ganesh Chaturthi."
+    }
+    response = client.post("/mission/detect", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["mission_id"] == "ganesh_chaturthi"
+
 
 def test_verification_agent_dynamic_graph():
     """Verify that verification compares against graph DB requirements and calculates dynamic scores."""

@@ -26,12 +26,41 @@ class BedrockClient:
     def __init__(self, config: BedrockConfig = None):
         self.config = config or BedrockConfig()
         self.use_mock = False
+        self.claude_available = None
         try:
             self.client = boto3.client("bedrock-runtime", region_name=self.config.aws_region)
         except Exception as e:
             logger.warning(f"Could not initialize boto3 Bedrock client: {e}. Using mock mode.")
             self.client = None
             self.use_mock = True
+
+    def check_claude_available(self) -> bool:
+        """Checks if Claude model access is active and approved on this account."""
+        if self.claude_available is not None:
+            return self.claude_available
+        if self.use_mock or not self.client:
+            self.claude_available = False
+            return False
+            
+        try:
+            model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
+            body = json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 1,
+                "messages": [{"role": "user", "content": "Hi"}]
+            })
+            self.client.invoke_model(
+                modelId=model_id,
+                contentType="application/json",
+                accept="application/json",
+                body=body
+            )
+            self.claude_available = True
+            return True
+        except Exception as e:
+            logger.warning(f"Claude is not available on Bedrock: {e}. Falling back to local re-ranking.")
+            self.claude_available = False
+            return False
 
     def generate_embeddings(self, text: str) -> List[float]:
         """Generates embeddings using amazon.titan-embed-text-v1 or falls back deterministically."""
