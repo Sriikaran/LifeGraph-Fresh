@@ -1,0 +1,222 @@
+import json
+from fastapi import FastAPI, Request, Response
+from pydantic import ValidationError
+from core.exceptions import LifeGraphException
+
+from domains.users.controller import UserController
+from domains.products.controller import ProductController
+from domains.carts.controller import CartController
+
+app = FastAPI(
+    title="Amazon LifeGraph",
+    version="1.0.0",
+    description="Local verification environment for LifeGraph APIs"
+)
+
+user_ctrl = UserController()
+product_ctrl = ProductController()
+cart_ctrl = CartController()
+
+async def create_event(request: Request) -> dict:
+    """Adapts a FastAPI Request into an AWS API Gateway event format."""
+    try:
+        body_bytes = await request.body()
+        body = body_bytes.decode('utf-8') if body_bytes else '{}'
+    except Exception:
+        body = '{}'
+        
+    return {
+        'path': request.url.path,
+        'httpMethod': request.method,
+        'body': body,
+        'pathParameters': request.path_params,
+        'queryStringParameters': dict(request.query_params) if request.query_params else None,
+    }
+
+def handle_controller_response(response: Response, result: dict):
+    """Parses controller result and sets status code and content."""
+    response.status_code = result.get('statusCode', 200)
+    body_str = result.get('body', '{}')
+    try:
+        return json.loads(body_str)
+    except json.JSONDecodeError:
+        return body_str
+
+def handle_exception(e: Exception, response: Response):
+    if isinstance(e, ValidationError):
+        response.status_code = 400
+        return {
+            "success": False,
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Invalid request payload",
+                "details": e.errors()
+            }
+        }
+    elif isinstance(e, LifeGraphException):
+        response.status_code = e.status_code
+        return {
+            "success": False,
+            "error": {
+                "code": e.code,
+                "message": e.message
+            }
+        }
+    else:
+        response.status_code = 500
+        return {
+            "success": False,
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": str(e)
+            }
+        }
+
+# --- Users ---
+@app.get("/users")
+async def list_users(request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = user_ctrl.list_users(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.post("/users")
+async def create_user(request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = user_ctrl.create_user(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.get("/users/{id}")
+async def get_user(id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = user_ctrl.get_user(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.put("/users/{id}")
+async def update_user(id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = user_ctrl.update_user(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.delete("/users/{id}")
+async def delete_user(id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = user_ctrl.delete_user(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+
+# --- Products ---
+@app.get("/products")
+async def list_products(request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = product_ctrl.list_products(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.post("/products")
+async def create_product(request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = product_ctrl.create_product(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.get("/products/{id}")
+async def get_product(id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = product_ctrl.get_product(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.put("/products/{id}")
+async def update_product(id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = product_ctrl.update_product(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.delete("/products/{id}")
+async def delete_product(id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = product_ctrl.delete_product(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+
+# --- Carts ---
+@app.get("/carts")
+async def list_carts(request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = cart_ctrl.list_carts(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.post("/carts")
+async def create_cart(request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = cart_ctrl.create_cart(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.get("/carts/{id}")
+async def get_cart(id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = cart_ctrl.get_cart(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.put("/carts/{id}")
+async def update_cart(id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = cart_ctrl.update_cart(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.delete("/carts/{id}")
+async def delete_cart(id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = cart_ctrl.delete_cart(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.post("/carts/{id}/items")
+async def add_cart_item(id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = cart_ctrl.add_item(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
