@@ -3,24 +3,23 @@ from fastapi import FastAPI, Request, Response
 from pydantic import ValidationError, BaseModel
 from core.exceptions import LifeGraphException
 
-from domains.users.controller import UserController
-from domains.products.controller import ProductController
-from domains.carts.controller import CartController
-from domains.verification.controller import VerificationController
-from domains.risk.controller import RiskController
-from domains.prevention.controller import PreventionController
-from domains.missions.controller import MissionController
-from domains.relationships.controller import RelationshipController
-from domains.graph.controller import GraphController
+from api.controllers.user_controller import UserController
+from api.controllers.product_controller import ProductController
+from api.controllers.cart_controller import CartController
+from api.controllers.verification_controller import VerificationController
+from api.controllers.risk_controller import RiskController
+from api.controllers.prevention_controller import PreventionController
+from api.controllers.mission_controller import MissionController
+from api.controllers.relationship_controller import RelationshipController
+from api.controllers.graph_controller import GraphController
+from api.controllers.workflow_controller import WorkflowController
 
-from domains.verification.schemas import VerificationRequest
-from domains.risk.schemas import RiskRequest
-from domains.prevention.schemas import PreventionRequest
-from domains.users.schemas import UserCreate, UserUpdate
-from domains.products.schemas import ProductCreate, ProductUpdate
-from domains.carts.schemas import CartCreate, CartUpdate, CartAddItem
-from domains.missions.schemas import MissionCreate, MissionUpdate
-from domains.relationships.schemas import RelationshipCreate
+from shared.schemas.engine_schemas import VerificationRequest, RiskRequest, PreventionRequest
+from shared.schemas.user_schemas import UserCreate, UserUpdate
+from shared.schemas.product_schemas import ProductCreate, ProductUpdate
+from shared.schemas.cart_schemas import CartCreate, CartUpdate, CartAddItem
+from shared.schemas.mission_schemas import MissionCreate, MissionUpdate
+from shared.schemas.relationship_schemas import RelationshipCreate
 
 app = FastAPI(
     title="Amazon LifeGraph",
@@ -37,6 +36,7 @@ prevention_ctrl = PreventionController()
 mission_ctrl = MissionController()
 relationship_ctrl = RelationshipController()
 graph_ctrl = GraphController()
+workflow_ctrl = WorkflowController()
 
 async def create_event(request: Request, payload: BaseModel = None) -> dict:
     """Adapts a FastAPI Request into an AWS API Gateway event format."""
@@ -142,7 +142,6 @@ async def delete_user(id: str, request: Request, response: Response):
     except Exception as e:
         return handle_exception(e, response)
 
-
 # --- Products ---
 @app.get("/products")
 async def list_products(request: Request, response: Response):
@@ -188,7 +187,6 @@ async def delete_product(id: str, request: Request, response: Response):
         return handle_controller_response(response, res)
     except Exception as e:
         return handle_exception(e, response)
-
 
 # --- Carts ---
 @app.get("/carts")
@@ -373,6 +371,16 @@ async def get_product_substitutes(id: str, request: Request, response: Response)
     event = await create_event(request)
     try:
         res = graph_ctrl.get_product_substitutes(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+# --- Workflows ---
+@app.post("/workflows/checkout")
+async def run_checkout_workflow(request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = workflow_ctrl.run_checkout_workflow(event)
         return handle_controller_response(response, res)
     except Exception as e:
         return handle_exception(e, response)

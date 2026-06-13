@@ -5,18 +5,16 @@ import os
 from pydantic import ValidationError
 from core.exceptions import LifeGraphException
 
-from domains.users.controller import UserController
-from domains.products.controller import ProductController
-from domains.carts.controller import CartController
-<<<<<<< HEAD
-from domains.verification.controller import VerificationController
-from domains.risk.controller import RiskController
-from domains.prevention.controller import PreventionController
-=======
-from domains.missions.controller import MissionController
-from domains.relationships.controller import RelationshipController
-from domains.graph.controller import GraphController
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
+from api.controllers.user_controller import UserController
+from api.controllers.product_controller import ProductController
+from api.controllers.cart_controller import CartController
+from api.controllers.verification_controller import VerificationController
+from api.controllers.risk_controller import RiskController
+from api.controllers.prevention_controller import PreventionController
+from api.controllers.mission_controller import MissionController
+from api.controllers.relationship_controller import RelationshipController
+from api.controllers.graph_controller import GraphController
+from api.controllers.workflow_controller import WorkflowController
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -24,15 +22,13 @@ logger.setLevel(logging.INFO)
 user_ctrl = UserController()
 product_ctrl = ProductController()
 cart_ctrl = CartController()
-<<<<<<< HEAD
 verification_ctrl = VerificationController()
 risk_ctrl = RiskController()
 prevention_ctrl = PreventionController()
-=======
 mission_ctrl = MissionController()
 relationship_ctrl = RelationshipController()
 graph_ctrl = GraphController()
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
+workflow_ctrl = WorkflowController()
 
 def handler(event, context):
     logger.info(f"Received event: {event}")
@@ -142,7 +138,6 @@ def handler(event, context):
         elif re.match(r'^/carts/[^/]+/items$', path) and method == 'POST':
             event['pathParameters'] = {'id': path.split('/')[-2]}
             return cart_ctrl.add_item(event)
-<<<<<<< HEAD
             
         # Verification Routes
         elif path == '/verification/verify' and method == 'POST':
@@ -155,8 +150,6 @@ def handler(event, context):
         # Prevention Routes
         elif path == '/prevent-checkout' and method == 'POST':
             return prevention_ctrl.evaluate(event)
-            
-=======
 
         # Mission Routes
         elif path == '/missions' and method == 'GET':
@@ -185,7 +178,10 @@ def handler(event, context):
             event['pathParameters'] = {'id': path.split('/')[-1]}
             return relationship_ctrl.delete_relationship(event)
 
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
+        # Workflow Routes
+        elif path == '/workflows/checkout' and method == 'POST':
+            return workflow_ctrl.run_checkout_workflow(event)
+
         else:
             return {
                 "statusCode": 404,
