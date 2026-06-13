@@ -14,10 +14,16 @@ from api.controllers.relationship_controller import RelationshipController
 from api.controllers.graph_controller import GraphController
 from api.controllers.workflow_controller import WorkflowController
 
+from domains.users.schemas import UserCreate, UserUpdate
+from domains.products.schemas import ProductCreate, ProductUpdate
+from domains.carts.schemas import CartCreate, CartUpdate, CartAddItem
+from domains.memory.controller import MemoryController
+from domains.adaptive.controller import AdaptiveController
+from domains.simulator.controller import SimulatorController
+from domains.memory.schemas import MissionStateRequest
+from domains.adaptive.schemas import AdaptiveRequest
+from domains.simulator.schemas import SimulatorRequest
 from shared.schemas.engine_schemas import VerificationRequest, RiskRequest, PreventionRequest
-from shared.schemas.user_schemas import UserCreate, UserUpdate
-from shared.schemas.product_schemas import ProductCreate, ProductUpdate
-from shared.schemas.cart_schemas import CartCreate, CartUpdate, CartAddItem
 from shared.schemas.mission_schemas import MissionCreate, MissionUpdate
 from shared.schemas.relationship_schemas import RelationshipCreate
 
@@ -33,6 +39,9 @@ app = FastAPI(
 user_ctrl = UserController()
 product_ctrl = ProductController()
 cart_ctrl = CartController()
+memory_ctrl = MemoryController()
+adaptive_ctrl = AdaptiveController()
+simulator_ctrl = SimulatorController()
 verification_ctrl = VerificationController()
 risk_ctrl = RiskController()
 prevention_ctrl = PreventionController()
@@ -243,6 +252,72 @@ async def add_cart_item(id: str, payload: CartAddItem, request: Request, respons
     event = await create_event(request, payload)
     try:
         res = cart_ctrl.add_item(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+# --- Memory ---
+@app.get("/memory/active/{user_id}")
+async def get_active_missions(user_id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = memory_ctrl.get_active_missions(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.get("/memory/history/{user_id}")
+async def get_mission_history(user_id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = memory_ctrl.get_mission_history(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.post("/memory/track")
+async def track_mission(payload: MissionStateRequest, request: Request, response: Response):
+    event = await create_event(request, payload)
+    try:
+        res = memory_ctrl.track_mission(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+# --- Adaptive ---
+@app.post("/adaptive/analyze")
+async def analyze_behavior(payload: AdaptiveRequest, request: Request, response: Response):
+    event = await create_event(request, payload)
+    try:
+        res = adaptive_ctrl.analyze_behavior(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.get("/adaptive/profile")
+async def get_shopper_profile(request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = adaptive_ctrl.get_shopper_profile(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+# --- Simulator ---
+@app.post("/simulator/run")
+async def simulate_mission(payload: SimulatorRequest, request: Request, response: Response):
+    event = await create_event(request, payload)
+    try:
+        res = simulator_ctrl.simulate_mission(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.get("/simulator/probability")
+async def get_success_probability(request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = simulator_ctrl.get_success_probability(event)
         return handle_controller_response(response, res)
     except Exception as e:
         return handle_exception(e, response)

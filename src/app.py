@@ -5,12 +5,15 @@ import os
 from pydantic import ValidationError
 from core.exceptions import LifeGraphException
 
-from api.controllers.user_controller import UserController
-from api.controllers.product_controller import ProductController
-from api.controllers.cart_controller import CartController
-from api.controllers.verification_controller import VerificationController
-from api.controllers.risk_controller import RiskController
-from api.controllers.prevention_controller import PreventionController
+from domains.users.controller import UserController
+from domains.products.controller import ProductController
+from domains.carts.controller import CartController
+from domains.memory.controller import MemoryController
+from domains.adaptive.controller import AdaptiveController
+from domains.simulator.controller import SimulatorController
+from domains.verification.controller import VerificationController
+from domains.risk.controller import RiskController
+from domains.prevention.controller import PreventionController
 from api.controllers.mission_controller import MissionController
 from api.controllers.relationship_controller import RelationshipController
 from api.controllers.graph_controller import GraphController
@@ -23,6 +26,9 @@ logger.setLevel(logging.INFO)
 user_ctrl = UserController()
 product_ctrl = ProductController()
 cart_ctrl = CartController()
+memory_ctrl = MemoryController()
+adaptive_ctrl = AdaptiveController()
+simulator_ctrl = SimulatorController()
 verification_ctrl = VerificationController()
 risk_ctrl = RiskController()
 prevention_ctrl = PreventionController()
@@ -141,6 +147,28 @@ def handler(event, context):
             event['pathParameters'] = {'id': path.split('/')[-2]}
             return cart_ctrl.add_item(event)
             
+        # Memory Routes
+        elif path.startswith('/memory/active/') and method == 'GET':
+            event['pathParameters'] = {'user_id': path.split('/')[-1]}
+            return memory_ctrl.get_active_missions(event)
+        elif path.startswith('/memory/history/') and method == 'GET':
+            event['pathParameters'] = {'user_id': path.split('/')[-1]}
+            return memory_ctrl.get_mission_history(event)
+        elif path == '/memory/track' and method == 'POST':
+            return memory_ctrl.track_mission(event)
+
+        # Adaptive Routes
+        elif path == '/adaptive/analyze' and method == 'POST':
+            return adaptive_ctrl.analyze_behavior(event)
+        elif path == '/adaptive/profile' and method == 'GET':
+            return adaptive_ctrl.get_shopper_profile(event)
+
+        # Simulator Routes
+        elif path == '/simulator/run' and method == 'POST':
+            return simulator_ctrl.simulate_mission(event)
+        elif path == '/simulator/probability' and method == 'GET':
+            return simulator_ctrl.get_success_probability(event)
+
         # Verification Routes
         elif path == '/verification/verify' and method == 'POST':
             return verification_ctrl.verify(event)
