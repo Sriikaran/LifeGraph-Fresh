@@ -171,7 +171,6 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/Cart'
-<<<<<<< HEAD
     VerificationRequest:
       type: object
       required:
@@ -183,7 +182,20 @@ components:
         cartId:
           type: string
     VerificationResponse:
-=======
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+<<<<<<< HEAD
+              type: object
+              properties:
+                verification_score:
+                  type: integer
+                missing_items:
+                  type: array
+                  items:
+                    type: string
     MissionCreate:
       type: object
       required:
@@ -212,7 +224,6 @@ components:
         category:
           type: string
     MissionResponse:
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
       allOf:
         - $ref: '#/components/schemas/SuccessEnvelope'
         - type: object
@@ -249,7 +260,6 @@ components:
         - type: object
           properties:
             data:
-<<<<<<< HEAD
               type: object
               properties:
                 compatibility_risk:
@@ -266,11 +276,27 @@ components:
       type: object
       required:
         - cartId
+        - missionId
       properties:
         cartId:
           type: string
+        missionId:
+          type: string
     PreventionResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+<<<<<<< HEAD
+              type: object
+              properties:
+                allow_checkout:
+                  type: boolean
+                reason:
+                  type: string
 =======
+              $ref: '#/components/schemas/Relationship'
               type: array
               items:
                 $ref: '#/components/schemas/Mission'
@@ -310,7 +336,6 @@ components:
         relationship_type:
           type: string
     RelationshipResponse:
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
       allOf:
         - $ref: '#/components/schemas/SuccessEnvelope'
         - type: object
@@ -587,11 +612,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope'
-<<<<<<< HEAD
   /verification/verify:
     post:
       summary: Verify Cart
-=======
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+<<<<<<< HEAD
+              $ref: '#/components/schemas/VerificationRequest'
+      responses:
+        '200':
+          description: Verification complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationResponse'
   /missions:
     get:
       summary: List Missions
@@ -604,7 +641,6 @@ paths:
                 $ref: '#/components/schemas/MissionListResponse'
     post:
       summary: Create Mission
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
       requestBody:
         required: true
         content:
@@ -655,7 +691,6 @@ paths:
         content:
           application/json:
             schema:
-<<<<<<< HEAD
               $ref: '#/components/schemas/RiskRequest'
       responses:
         '200':
@@ -667,7 +702,30 @@ paths:
   /prevent-checkout:
     post:
       summary: Evaluate Prevention
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+<<<<<<< HEAD
+              $ref: '#/components/schemas/PreventionRequest'
+      responses:
+        '200':
+          description: Evaluation complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreventionResponse'
 =======
+              $ref: '#/components/schemas/RelationshipCreate'
+      responses:
+        '201':
+          description: Relationship created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationshipResponse'
+  /relationships/{id}:
               $ref: '#/components/schemas/MissionCreate'
       responses:
         '200':
@@ -697,7 +755,6 @@ paths:
                 $ref: '#/components/schemas/RelationshipListResponse'
     post:
       summary: Create Relationship
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
       requestBody:
         required: true
         content:

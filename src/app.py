@@ -8,15 +8,12 @@ from core.exceptions import LifeGraphException
 from domains.users.controller import UserController
 from domains.products.controller import ProductController
 from domains.carts.controller import CartController
-<<<<<<< HEAD
 from domains.verification.controller import VerificationController
 from domains.risk.controller import RiskController
 from domains.prevention.controller import PreventionController
-=======
 from domains.missions.controller import MissionController
 from domains.relationships.controller import RelationshipController
 from domains.graph.controller import GraphController
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -24,15 +21,12 @@ logger.setLevel(logging.INFO)
 user_ctrl = UserController()
 product_ctrl = ProductController()
 cart_ctrl = CartController()
-<<<<<<< HEAD
 verification_ctrl = VerificationController()
 risk_ctrl = RiskController()
 prevention_ctrl = PreventionController()
-=======
 mission_ctrl = MissionController()
 relationship_ctrl = RelationshipController()
 graph_ctrl = GraphController()
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
 
 def handler(event, context):
     logger.info(f"Received event: {event}")
@@ -142,7 +136,6 @@ def handler(event, context):
         elif re.match(r'^/carts/[^/]+/items$', path) and method == 'POST':
             event['pathParameters'] = {'id': path.split('/')[-2]}
             return cart_ctrl.add_item(event)
-<<<<<<< HEAD
             
         # Verification Routes
         elif path == '/verification/verify' and method == 'POST':
@@ -156,7 +149,6 @@ def handler(event, context):
         elif path == '/prevent-checkout' and method == 'POST':
             return prevention_ctrl.evaluate(event)
             
-=======
 
         # Mission Routes
         elif path == '/missions' and method == 'GET':
@@ -185,7 +177,6 @@ def handler(event, context):
             event['pathParameters'] = {'id': path.split('/')[-1]}
             return relationship_ctrl.delete_relationship(event)
 
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
         else:
             return {
                 "statusCode": 404,

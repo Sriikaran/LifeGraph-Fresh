@@ -1,25 +1,11 @@
 from domains.risk.repository import RiskRepository
 from domains.risk.schemas import RiskRequest, RiskResponseData
-
-class Person1IntegrationAdapter:
-    """TODO: Integration adapter where Person 1 APIs will be consumed."""
-    
-    def get_mission(self, mission_id: str) -> dict:
-        # TODO: Consume Person 1 Mission API here
-        return {"mission_id": mission_id}
-        
-    def get_cart(self, cart_id: str) -> dict:
-        # TODO: Consume Person 1 Cart API here
-        return {"cart_id": cart_id}
-        
-    def get_relationships(self, mission_id: str) -> dict:
-        # TODO: Consume Person 1 Relationship API and Graph API here
-        return {"mission_id": mission_id, "dependencies": []}
+from domains.graph.service import GraphService
 
 class RiskService:
     def __init__(self):
         self.repository = RiskRepository()
-        self.integration = Person1IntegrationAdapter()
+        self.graph_service = GraphService()
 
     def analyze(self, data: RiskRequest) -> RiskResponseData:
         """
@@ -27,28 +13,39 @@ class RiskService:
         * Calculate risk score.
         * Return LOW/MEDIUM/HIGH internally or as components.
         """
-        # Fetch relationships to determine compatibility risk
-        # Note: RiskRequest currently doesn't provide missionId, so we use a mock one 
-        # to demonstrate the integration point.
-        relationships = self.integration.get_relationships("MOCK_MISSION_ID")
-        
         risk_score = 0
         compatibility_risk = "LOW"
         budget_risk = "LOW"
         quantity_risk = "LOW"
         timing_risk = "LOW"
         
-        # Logic based on verification results and relationships
+        # Base logic on verification results
         if data.verification_score < 50:
             risk_score += 50
-            compatibility_risk = "HIGH"
         elif data.verification_score < 80:
             risk_score += 20
-            compatibility_risk = "MEDIUM"
             
         if len(data.missing_items) > 2:
             quantity_risk = "HIGH"
             risk_score += 15
+            
+        # Use graph data to infer compatibility and deep dependency risk
+        has_deep_dependencies = False
+        for missing_item in data.missing_items:
+            # We fetch dependencies for the missing items.
+            # If a missing item itself has dependencies, it means the user is missing a complex set of products.
+            dependencies = self.graph_service.get_product_dependencies(missing_item)
+            if len(dependencies) > 0:
+                has_deep_dependencies = True
+                risk_score += (10 * len(dependencies))
+                
+        if has_deep_dependencies:
+            compatibility_risk = "HIGH"
+        elif risk_score >= 50:
+            compatibility_risk = "MEDIUM"
+            
+        # Ensure risk_score is capped at 100
+        risk_score = min(100, risk_score)
             
         return RiskResponseData(
             compatibility_risk=compatibility_risk,

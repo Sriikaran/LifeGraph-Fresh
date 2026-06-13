@@ -1,25 +1,16 @@
 from domains.prevention.repository import PreventionRepository
 from domains.prevention.schemas import PreventionRequest, PreventionResponseData
 
-class Person1IntegrationAdapter:
-    """TODO: Integration adapter where Person 1 APIs will be consumed."""
-    
-    def get_mission(self, mission_id: str) -> dict:
-        # TODO: Consume Person 1 Mission API here
-        return {"mission_id": mission_id}
-        
-    def get_cart(self, cart_id: str) -> dict:
-        # TODO: Consume Person 1 Cart API here
-        return {"cart_id": cart_id}
-        
-    def get_relationships(self, mission_id: str) -> dict:
-        # TODO: Consume Person 1 Relationship API and Graph API here
-        return {"mission_id": mission_id, "dependencies": []}
+from domains.verification.service import VerificationService
+from domains.verification.schemas import VerificationRequest
+from domains.risk.service import RiskService
+from domains.risk.schemas import RiskRequest
 
 class PreventionService:
     def __init__(self):
         self.repository = PreventionRepository()
-        self.integration = Person1IntegrationAdapter()
+        self.verification_service = VerificationService()
+        self.risk_service = RiskService()
 
     def evaluate(self, data: PreventionRequest) -> PreventionResponseData:
         """
@@ -27,22 +18,28 @@ class PreventionService:
         * Decide allowCheckout based on verification and risk.
         * Return reason / warnings.
         """
-        # Fetch cart details to understand the context
-        cart = self.integration.get_cart(data.cartId)
+        # Call VerificationService
+        # Pass the dynamic missionId from the request
+        verification_req = VerificationRequest(missionId=data.missionId, cartId=data.cartId)
+        verification_res = self.verification_service.verify(verification_req)
         
-        # TODO: Integrate with actual Verification APIs and Risk APIs
+        # Call RiskService
+        risk_req = RiskRequest(
+            verification_score=verification_res.verification_score,
+            missing_items=verification_res.missing_items
+        )
+        risk_res = self.risk_service.analyze(risk_req)
         
-        # Mocking downstream responses for now
-        mock_verification_score = 60 # Assume MEDIUM risk from this
-        mock_risk_score = 35 # Assume MEDIUM risk
+        actual_verification_score = verification_res.verification_score
+        actual_risk_score = risk_res.risk_score
         
         allow_checkout = True
         reason = ""
         
-        if mock_risk_score >= 70 or mock_verification_score < 30:
+        if actual_risk_score >= 70 or actual_verification_score < 30:
             allow_checkout = False
             reason = "High risk or low verification score detected. Checkout blocked."
-        elif mock_risk_score >= 30:
+        elif actual_risk_score >= 30:
             reason = "Medium risk detected. Please review your cart."
             
         return PreventionResponseData(
