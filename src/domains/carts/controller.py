@@ -1,6 +1,6 @@
 import json
 from domains.carts.service import CartService
-from domains.carts.schemas import CartCreate, CartAddItem, CartResponse, CartItem
+from domains.carts.schemas import CartCreate, CartUpdate, CartAddItem, CartResponse, CartItem
 
 class CartController:
     def __init__(self):
@@ -43,7 +43,7 @@ class CartController:
     def update_cart(self, event: dict) -> dict:
         cart_id = event['pathParameters']['id']
         body = json.loads(event.get('body', '{}'))
-        schema = CartCreate(**body)
+        schema = CartUpdate(**body)
         cart = self.service.update_cart(cart_id, schema)
         response = CartResponse(
             id=cart.id, 

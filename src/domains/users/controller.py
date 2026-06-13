@@ -1,6 +1,6 @@
 import json
 from domains.users.service import UserService
-from domains.users.schemas import UserCreate, UserResponse
+from domains.users.schemas import UserCreate, UserUpdate, UserResponse
 
 class UserController:
     def __init__(self):
@@ -28,7 +28,7 @@ class UserController:
     def update_user(self, event: dict) -> dict:
         user_id = event['pathParameters']['id']
         body = json.loads(event.get('body', '{}'))
-        schema = UserCreate(**body)
+        schema = UserUpdate(**body)
         user = self.service.update_user(user_id, schema)
         response = UserResponse(id=user.id, name=user.name, email=user.email)
         return {

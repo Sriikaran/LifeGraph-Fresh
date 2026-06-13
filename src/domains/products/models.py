@@ -22,7 +22,7 @@ class ProductModel:
         from decimal import Decimal
         return {
             'PK': f"PRODUCT#{self.id}",
-            'SK': f"METADATA#{self.id}",
+            'SK': "METADATA",
             'GSI1PK': f"CATEGORY#{self.category}",
             'GSI1SK': f"PRODUCT#{self.id}",
             'id': self.id,

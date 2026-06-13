@@ -8,6 +8,10 @@ class CartItem(BaseModel):
 class CartCreate(BaseModel):
     user_id: str
 
+class CartUpdate(BaseModel):
+    user_id: str | None = None
+    status: str | None = None
+
 class CartAddItem(BaseModel):
     product_id: str
     quantity: int = Field(gt=0)

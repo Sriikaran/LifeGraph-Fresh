@@ -20,7 +20,7 @@ class CartModel:
         from decimal import Decimal
         return {
             'PK': f"CART#{self.id}",
-            'SK': f"METADATA#{self.id}",
+            'SK': "METADATA",
             'GSI1PK': f"USER#{self.user_id}",
             'GSI1SK': f"CART#{self.id}",
             'id': self.id,
