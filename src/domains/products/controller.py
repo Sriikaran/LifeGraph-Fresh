@@ -1,6 +1,6 @@
 import json
 from domains.products.service import ProductService
-from domains.products.schemas import ProductCreate, ProductResponse
+from domains.products.schemas import ProductCreate, ProductUpdate, ProductResponse
 
 class ProductController:
     def __init__(self):
@@ -40,7 +40,7 @@ class ProductController:
     def update_product(self, event: dict) -> dict:
         product_id = event['pathParameters']['id']
         body = json.loads(event.get('body', '{}'))
-        schema = ProductCreate(**body)
+        schema = ProductUpdate(**body)
         product = self.service.update_product(product_id, schema)
         response = ProductResponse(
             id=product.id, 

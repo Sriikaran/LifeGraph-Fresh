@@ -8,7 +8,7 @@ class CartRepository(BaseRepository):
         return cart
 
     def get_cart(self, cart_id: str) -> Optional[CartModel]:
-        item = self.get_item(f"CART#{cart_id}", f"METADATA#{cart_id}")
+        item = self.get_item(f"CART#{cart_id}", "METADATA")
         if item:
             return CartModel.from_dict(item)
         return None
@@ -22,10 +22,10 @@ class CartRepository(BaseRepository):
         return cart
 
     def delete_cart(self, cart_id: str) -> None:
-        self.delete_item(f"CART#{cart_id}", f"METADATA#{cart_id}")
+        self.delete_item(f"CART#{cart_id}", "METADATA")
 
     def list_carts(self) -> List[CartModel]:
-        items = self.scan_prefix("CART#", "METADATA#")
+        items = self.scan_prefix("CART#", "METADATA")
         return [CartModel.from_dict(item) for item in items]
 
     def add_item_to_cart(self, item: CartItemModel) -> None:

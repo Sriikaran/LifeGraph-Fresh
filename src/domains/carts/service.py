@@ -1,8 +1,9 @@
 import uuid
 from typing import List
 from domains.carts.repository import CartRepository
+from domains.carts.repository import CartRepository
 from domains.carts.models import CartModel, CartItemModel
-from domains.carts.schemas import CartCreate, CartAddItem
+from domains.carts.schemas import CartCreate, CartUpdate, CartAddItem
 from core.exceptions import NotFoundException
 
 class CartService:
@@ -20,9 +21,12 @@ class CartService:
             raise NotFoundException("Cart", cart_id)
         return cart
 
-    def update_cart(self, cart_id: str, data: CartCreate) -> CartModel:
+    def update_cart(self, cart_id: str, data: CartUpdate) -> CartModel:
         cart = self.get_cart(cart_id)
-        cart.user_id = data.user_id
+        if data.user_id is not None:
+            cart.user_id = data.user_id
+        if data.status is not None:
+            cart.status = data.status
         return self.repository.update_cart(cart)
 
     def delete_cart(self, cart_id: str) -> None:

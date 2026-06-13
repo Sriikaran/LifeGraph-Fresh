@@ -9,5 +9,11 @@ class ProductBase(BaseModel):
 class ProductCreate(ProductBase):
     pass
 
+class ProductUpdate(BaseModel):
+    name: str | None = None
+    price: float | None = Field(None, gt=0)
+    stock: int | None = Field(None, ge=0)
+    category: str | None = None
+
 class ProductResponse(ProductBase):
     id: str

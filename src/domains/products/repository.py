@@ -8,7 +8,7 @@ class ProductRepository(BaseRepository):
         return product
 
     def get_product(self, product_id: str) -> Optional[ProductModel]:
-        item = self.get_item(f"PRODUCT#{product_id}", f"METADATA#{product_id}")
+        item = self.get_item(f"PRODUCT#{product_id}", "METADATA")
         if item:
             return ProductModel.from_dict(item)
         return None
@@ -18,12 +18,12 @@ class ProductRepository(BaseRepository):
         return product
 
     def delete_product(self, product_id: str) -> None:
-        self.delete_item(f"PRODUCT#{product_id}", f"METADATA#{product_id}")
+        self.delete_item(f"PRODUCT#{product_id}", "METADATA")
 
     def list_products_by_category(self, category: str) -> List[ProductModel]:
         items = self.query_gsi1(f"CATEGORY#{category}")
         return [ProductModel.from_dict(item) for item in items]
 
     def list_products(self) -> List[ProductModel]:
-        items = self.scan_prefix("PRODUCT#", "METADATA#")
+        items = self.scan_prefix("PRODUCT#", "METADATA")
         return [ProductModel.from_dict(item) for item in items]

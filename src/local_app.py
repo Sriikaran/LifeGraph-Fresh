@@ -1,6 +1,6 @@
 import json
 from fastapi import FastAPI, Request, Response
-from pydantic import ValidationError
+from pydantic import ValidationError, BaseModel
 from core.exceptions import LifeGraphException
 
 from domains.users.controller import UserController
@@ -9,9 +9,18 @@ from domains.carts.controller import CartController
 from domains.verification.controller import VerificationController
 from domains.risk.controller import RiskController
 from domains.prevention.controller import PreventionController
+from domains.missions.controller import MissionController
+from domains.relationships.controller import RelationshipController
+from domains.graph.controller import GraphController
+
 from domains.verification.schemas import VerificationRequest
 from domains.risk.schemas import RiskRequest
 from domains.prevention.schemas import PreventionRequest
+from domains.users.schemas import UserCreate, UserUpdate
+from domains.products.schemas import ProductCreate, ProductUpdate
+from domains.carts.schemas import CartCreate, CartUpdate, CartAddItem
+from domains.missions.schemas import MissionCreate, MissionUpdate
+from domains.relationships.schemas import RelationshipCreate
 
 app = FastAPI(
     title="Amazon LifeGraph",
@@ -25,12 +34,18 @@ cart_ctrl = CartController()
 verification_ctrl = VerificationController()
 risk_ctrl = RiskController()
 prevention_ctrl = PreventionController()
+mission_ctrl = MissionController()
+relationship_ctrl = RelationshipController()
+graph_ctrl = GraphController()
 
-async def create_event(request: Request) -> dict:
+async def create_event(request: Request, payload: BaseModel = None) -> dict:
     """Adapts a FastAPI Request into an AWS API Gateway event format."""
     try:
-        body_bytes = await request.body()
-        body = body_bytes.decode('utf-8') if body_bytes else '{}'
+        if payload:
+            body = payload.model_dump_json()
+        else:
+            body_bytes = await request.body()
+            body = body_bytes.decode('utf-8') if body_bytes else '{}'
     except Exception:
         body = '{}'
         
@@ -92,8 +107,8 @@ async def list_users(request: Request, response: Response):
         return handle_exception(e, response)
 
 @app.post("/users")
-async def create_user(request: Request, response: Response):
-    event = await create_event(request)
+async def create_user(payload: UserCreate, request: Request, response: Response):
+    event = await create_event(request, payload)
     try:
         res = user_ctrl.create_user(event)
         return handle_controller_response(response, res)
@@ -110,8 +125,8 @@ async def get_user(id: str, request: Request, response: Response):
         return handle_exception(e, response)
 
 @app.put("/users/{id}")
-async def update_user(id: str, request: Request, response: Response):
-    event = await create_event(request)
+async def update_user(id: str, payload: UserUpdate, request: Request, response: Response):
+    event = await create_event(request, payload)
     try:
         res = user_ctrl.update_user(event)
         return handle_controller_response(response, res)
@@ -139,8 +154,8 @@ async def list_products(request: Request, response: Response):
         return handle_exception(e, response)
 
 @app.post("/products")
-async def create_product(request: Request, response: Response):
-    event = await create_event(request)
+async def create_product(payload: ProductCreate, request: Request, response: Response):
+    event = await create_event(request, payload)
     try:
         res = product_ctrl.create_product(event)
         return handle_controller_response(response, res)
@@ -157,8 +172,8 @@ async def get_product(id: str, request: Request, response: Response):
         return handle_exception(e, response)
 
 @app.put("/products/{id}")
-async def update_product(id: str, request: Request, response: Response):
-    event = await create_event(request)
+async def update_product(id: str, payload: ProductUpdate, request: Request, response: Response):
+    event = await create_event(request, payload)
     try:
         res = product_ctrl.update_product(event)
         return handle_controller_response(response, res)
@@ -186,8 +201,8 @@ async def list_carts(request: Request, response: Response):
         return handle_exception(e, response)
 
 @app.post("/carts")
-async def create_cart(request: Request, response: Response):
-    event = await create_event(request)
+async def create_cart(payload: CartCreate, request: Request, response: Response):
+    event = await create_event(request, payload)
     try:
         res = cart_ctrl.create_cart(event)
         return handle_controller_response(response, res)
@@ -204,8 +219,8 @@ async def get_cart(id: str, request: Request, response: Response):
         return handle_exception(e, response)
 
 @app.put("/carts/{id}")
-async def update_cart(id: str, request: Request, response: Response):
-    event = await create_event(request)
+async def update_cart(id: str, payload: CartUpdate, request: Request, response: Response):
+    event = await create_event(request, payload)
     try:
         res = cart_ctrl.update_cart(event)
         return handle_controller_response(response, res)
@@ -222,8 +237,8 @@ async def delete_cart(id: str, request: Request, response: Response):
         return handle_exception(e, response)
 
 @app.post("/carts/{id}/items")
-async def add_cart_item(id: str, request: Request, response: Response):
-    event = await create_event(request)
+async def add_cart_item(id: str, payload: CartAddItem, request: Request, response: Response):
+    event = await create_event(request, payload)
     try:
         res = cart_ctrl.add_item(event)
         return handle_controller_response(response, res)
@@ -233,7 +248,7 @@ async def add_cart_item(id: str, request: Request, response: Response):
 # --- Verification ---
 @app.post("/verification/verify")
 async def verify(request: Request, response: Response, payload: VerificationRequest):
-    event = await create_event(request)
+    event = await create_event(request, payload)
     try:
         res = verification_ctrl.verify(event)
         return handle_controller_response(response, res)
@@ -243,7 +258,7 @@ async def verify(request: Request, response: Response, payload: VerificationRequ
 # --- Risk ---
 @app.post("/risk/analyze")
 async def analyze(request: Request, response: Response, payload: RiskRequest):
-    event = await create_event(request)
+    event = await create_event(request, payload)
     try:
         res = risk_ctrl.analyze(event)
         return handle_controller_response(response, res)
@@ -253,10 +268,111 @@ async def analyze(request: Request, response: Response, payload: RiskRequest):
 # --- Prevention ---
 @app.post("/prevent-checkout")
 async def evaluate(request: Request, response: Response, payload: PreventionRequest):
-    event = await create_event(request)
+    event = await create_event(request, payload)
     try:
         res = prevention_ctrl.evaluate(event)
         return handle_controller_response(response, res)
     except Exception as e:
         return handle_exception(e, response)
 
+# --- Missions ---
+@app.get("/missions")
+async def list_missions(request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = mission_ctrl.list_missions(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.post("/missions")
+async def create_mission(payload: MissionCreate, request: Request, response: Response):
+    event = await create_event(request, payload)
+    try:
+        res = mission_ctrl.create_mission(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.get("/missions/{id}")
+async def get_mission(id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = mission_ctrl.get_mission(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.put("/missions/{id}")
+async def update_mission(id: str, payload: MissionUpdate, request: Request, response: Response):
+    event = await create_event(request, payload)
+    try:
+        res = mission_ctrl.update_mission(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.delete("/missions/{id}")
+async def delete_mission(id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = mission_ctrl.delete_mission(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+# --- Relationships ---
+@app.get("/relationships")
+async def list_relationships(request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = relationship_ctrl.list_relationships(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.post("/relationships")
+async def create_relationship(payload: RelationshipCreate, request: Request, response: Response):
+    event = await create_event(request, payload)
+    try:
+        res = relationship_ctrl.create_relationship(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.delete("/relationships/{id}")
+async def delete_relationship(id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = relationship_ctrl.delete_relationship(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+# --- Graph ---
+@app.get("/missions/{id}/requirements")
+async def get_mission_requirements(id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = graph_ctrl.get_mission_requirements(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.get("/products/{id}/dependencies")
+async def get_product_dependencies(id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = graph_ctrl.get_product_dependencies(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+@app.get("/products/{id}/substitutes")
+async def get_product_substitutes(id: str, request: Request, response: Response):
+    event = await create_event(request)
+    try:
+        res = graph_ctrl.get_product_substitutes(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
