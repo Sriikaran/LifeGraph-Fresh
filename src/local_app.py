@@ -21,6 +21,9 @@ from shared.schemas.cart_schemas import CartCreate, CartUpdate, CartAddItem
 from shared.schemas.mission_schemas import MissionCreate, MissionUpdate
 from shared.schemas.relationship_schemas import RelationshipCreate
 
+from agents.orchestrator.controller import OrchestratorController
+from agents.orchestrator.schemas import MissionExecutionRequest
+
 app = FastAPI(
     title="Amazon LifeGraph",
     version="1.0.0",
@@ -37,6 +40,7 @@ mission_ctrl = MissionController()
 relationship_ctrl = RelationshipController()
 graph_ctrl = GraphController()
 workflow_ctrl = WorkflowController()
+orchestrator_ctrl = OrchestratorController()
 
 async def create_event(request: Request, payload: BaseModel = None) -> dict:
     """Adapts a FastAPI Request into an AWS API Gateway event format."""
@@ -381,6 +385,16 @@ async def run_checkout_workflow(request: Request, response: Response):
     event = await create_event(request)
     try:
         res = workflow_ctrl.run_checkout_workflow(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+# --- Mission Orchestrator ---
+@app.post("/mission/execute")
+async def execute_mission(payload: MissionExecutionRequest, request: Request, response: Response):
+    event = await create_event(request, payload)
+    try:
+        res = orchestrator_ctrl.execute_mission(event)
         return handle_controller_response(response, res)
     except Exception as e:
         return handle_exception(e, response)

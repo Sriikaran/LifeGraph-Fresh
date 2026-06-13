@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Amazon LifeGraph API
   version: 1.0.0
-  description: Phase 2.5 API documentation with Swagger UI for verification.
+  description: API documentation for LifeGraph backend services.
 servers:
   - url: /Prod
 components:
@@ -171,7 +171,6 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/Cart'
-<<<<<<< HEAD
     VerificationRequest:
       type: object
       required:
@@ -183,7 +182,68 @@ components:
         cartId:
           type: string
     VerificationResponse:
-=======
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                verification_score:
+                  type: integer
+                missing_items:
+                  type: array
+                  items:
+                    type: string
+    RiskRequest:
+      type: object
+      required:
+        - verification_score
+        - missing_items
+      properties:
+        verification_score:
+          type: integer
+        missing_items:
+          type: array
+          items:
+            type: string
+    RiskResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                compatibility_risk:
+                  type: string
+                budget_risk:
+                  type: string
+                quantity_risk:
+                  type: string
+                timing_risk:
+                  type: string
+                risk_score:
+                  type: integer
+    PreventionRequest:
+      type: object
+      required:
+        - cartId
+      properties:
+        cartId:
+          type: string
+    PreventionResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                allow_checkout:
+                  type: boolean
+                reason:
+                  type: string
     MissionCreate:
       type: object
       required:
@@ -212,65 +272,18 @@ components:
         category:
           type: string
     MissionResponse:
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
       allOf:
         - $ref: '#/components/schemas/SuccessEnvelope'
         - type: object
           properties:
             data:
-<<<<<<< HEAD
-              type: object
-              properties:
-                verification_score:
-                  type: integer
-                missing_items:
-                  type: array
-                  items:
-                    type: string
-    RiskRequest:
-      type: object
-      required:
-        - verification_score
-        - missing_items
-      properties:
-        verification_score:
-          type: integer
-        missing_items:
-          type: array
-          items:
-            type: string
-    RiskResponse:
-=======
               $ref: '#/components/schemas/Mission'
     MissionListResponse:
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
       allOf:
         - $ref: '#/components/schemas/SuccessEnvelope'
         - type: object
           properties:
             data:
-<<<<<<< HEAD
-              type: object
-              properties:
-                compatibility_risk:
-                  type: string
-                budget_risk:
-                  type: string
-                quantity_risk:
-                  type: string
-                timing_risk:
-                  type: string
-                risk_score:
-                  type: integer
-    PreventionRequest:
-      type: object
-      required:
-        - cartId
-      properties:
-        cartId:
-          type: string
-    PreventionResponse:
-=======
               type: array
               items:
                 $ref: '#/components/schemas/Mission'
@@ -310,20 +323,11 @@ components:
         relationship_type:
           type: string
     RelationshipResponse:
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
       allOf:
         - $ref: '#/components/schemas/SuccessEnvelope'
         - type: object
           properties:
             data:
-<<<<<<< HEAD
-              type: object
-              properties:
-                allow_checkout:
-                  type: boolean
-                reason:
-                  type: string
-=======
               $ref: '#/components/schemas/Relationship'
     RelationshipListResponse:
       allOf:
@@ -343,7 +347,102 @@ components:
               type: array
               items:
                 type: string
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
+    MissionContext:
+      type: object
+      properties:
+        budget:
+          type: number
+        urgency:
+          type: string
+        location:
+          type: string
+    MissionExecutionRequest:
+      type: object
+      required:
+        - userId
+        - missionId
+        - cartId
+      properties:
+        userId:
+          type: string
+          example: USER001
+        missionId:
+          type: string
+          example: BIRTHDAY
+        cartId:
+          type: string
+          example: CART001
+        context:
+          $ref: '#/components/schemas/MissionContext'
+    MissionExecutionResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                mission:
+                  type: object
+                  properties:
+                    missionId:
+                      type: string
+                    name:
+                      type: string
+                verification:
+                  type: object
+                  properties:
+                    score:
+                      type: integer
+                    missingItems:
+                      type: array
+                      items:
+                        type: string
+                risk:
+                  type: object
+                  properties:
+                    overallRisk:
+                      type: string
+                    compatibilityRisk:
+                      type: integer
+                    budgetRisk:
+                      type: integer
+                    quantityRisk:
+                      type: integer
+                    timingRisk:
+                      type: integer
+                simulation:
+                  type: object
+                  properties:
+                    successProbability:
+                      type: integer
+                adaptiveDecision:
+                  type: object
+                  properties:
+                    strictMode:
+                      type: boolean
+                checkout:
+                  type: object
+                  properties:
+                    allowCheckout:
+                      type: boolean
+                    blockingIssues:
+                      type: array
+                      items:
+                        type: string
+                recommendations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      productId:
+                        type: string
+                      name:
+                        type: string
+                      price:
+                        type: number
+                      reason:
+                        type: string
 paths:
   /users:
     get:
@@ -587,11 +686,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessEnvelope'
-<<<<<<< HEAD
   /verification/verify:
     post:
       summary: Verify Cart
-=======
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerificationRequest'
+      responses:
+        '200':
+          description: Verification complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationResponse'
+  /risk/analyze:
+    post:
+      summary: Analyze Risk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RiskRequest'
+      responses:
+        '200':
+          description: Risk analysis complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskResponse'
+  /prevent-checkout:
+    post:
+      summary: Evaluate Prevention
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreventionRequest'
+      responses:
+        '200':
+          description: Evaluation complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreventionResponse'
   /missions:
     get:
       summary: List Missions
@@ -604,25 +746,11 @@ paths:
                 $ref: '#/components/schemas/MissionListResponse'
     post:
       summary: Create Mission
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
       requestBody:
         required: true
         content:
           application/json:
             schema:
-<<<<<<< HEAD
-              $ref: '#/components/schemas/VerificationRequest'
-      responses:
-        '200':
-          description: Verification complete
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VerificationResponse'
-  /risk/analyze:
-    post:
-      summary: Analyze Risk
-=======
               $ref: '#/components/schemas/MissionCreate'
       responses:
         '201':
@@ -649,25 +777,11 @@ paths:
                 $ref: '#/components/schemas/MissionResponse'
     put:
       summary: Update Mission
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
       requestBody:
         required: true
         content:
           application/json:
             schema:
-<<<<<<< HEAD
-              $ref: '#/components/schemas/RiskRequest'
-      responses:
-        '200':
-          description: Risk analysis complete
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RiskResponse'
-  /prevent-checkout:
-    post:
-      summary: Evaluate Prevention
-=======
               $ref: '#/components/schemas/MissionCreate'
       responses:
         '200':
@@ -697,22 +811,11 @@ paths:
                 $ref: '#/components/schemas/RelationshipListResponse'
     post:
       summary: Create Relationship
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
       requestBody:
         required: true
         content:
           application/json:
             schema:
-<<<<<<< HEAD
-              $ref: '#/components/schemas/PreventionRequest'
-      responses:
-        '200':
-          description: Evaluation complete
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PreventionResponse'
-=======
               $ref: '#/components/schemas/RelationshipCreate'
       responses:
         '201':
@@ -785,4 +888,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StringListResponse'
->>>>>>> d99995d (Phase 3 complete - Commerce Knowledge Graph and Mission Graph Engine)
+  /mission/execute:
+    post:
+      summary: Execute Mission Pipeline (Master Orchestrator)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MissionExecutionRequest'
+      responses:
+        '200':
+          description: Master Orchestrator execution result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MissionExecutionResponse'

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 class MissionVerifiedEvent(BaseModel):
@@ -27,3 +27,24 @@ class SimulationCompletedEvent(BaseModel):
     outcome: str
     details: Dict[str, Any]
     completed_at: str
+
+# New Orchestration Events
+class MissionLoadedEvent(BaseModel):
+    mission_id: str
+    user_id: str
+    required_products: List[str]
+    loaded_at: str
+
+class VerificationCompletedEvent(BaseModel):
+    mission_id: str
+    cart_id: str
+    score: int
+    missing_items: List[str]
+    completed_at: str
+
+class CheckoutDecisionEvent(BaseModel):
+    user_id: str
+    cart_id: str
+    allow_checkout: bool
+    blocking_issues: List[str]
+    decided_at: str

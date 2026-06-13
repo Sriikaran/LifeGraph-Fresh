@@ -15,6 +15,7 @@ from api.controllers.mission_controller import MissionController
 from api.controllers.relationship_controller import RelationshipController
 from api.controllers.graph_controller import GraphController
 from api.controllers.workflow_controller import WorkflowController
+from agents.orchestrator.controller import OrchestratorController
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -29,6 +30,7 @@ mission_ctrl = MissionController()
 relationship_ctrl = RelationshipController()
 graph_ctrl = GraphController()
 workflow_ctrl = WorkflowController()
+orchestrator_ctrl = OrchestratorController()
 
 def handler(event, context):
     logger.info(f"Received event: {event}")
@@ -181,6 +183,10 @@ def handler(event, context):
         # Workflow Routes
         elif path == '/workflows/checkout' and method == 'POST':
             return workflow_ctrl.run_checkout_workflow(event)
+
+        # Mission Orchestrator Routes
+        elif path == '/mission/execute' and method == 'POST':
+            return orchestrator_ctrl.execute_mission(event)
 
         else:
             return {
