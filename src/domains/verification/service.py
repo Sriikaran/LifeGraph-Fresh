@@ -1,9 +1,27 @@
 from domains.verification.repository import VerificationRepository
 from domains.verification.schemas import VerificationRequest, VerificationResponseData
 
+class Person1IntegrationAdapter:
+    """TODO: Integration adapter where Person 1 APIs will be consumed."""
+    
+    def get_mission(self, mission_id: str) -> dict:
+        # TODO: Consume Person 1 Mission API here
+        # Returning placeholder data to keep API contracts unchanged
+        return {"mission_id": mission_id, "requirements": ["Cake", "Candles", "Drinks", "Snacks"]}
+        
+    def get_cart(self, cart_id: str) -> dict:
+        # TODO: Consume Person 1 Cart API here
+        # Returning placeholder data to keep API contracts unchanged
+        return {"cart_id": cart_id, "contents": ["Cake", "Balloons", "Drinks"]}
+        
+    def get_relationships(self, mission_id: str) -> dict:
+        # TODO: Consume Person 1 Relationship API and Graph API here
+        return {"mission_id": mission_id, "dependencies": []}
+
 class VerificationService:
     def __init__(self):
         self.repository = VerificationRepository()
+        self.integration = Person1IntegrationAdapter()
 
     def verify(self, data: VerificationRequest) -> VerificationResponseData:
         """
@@ -11,15 +29,13 @@ class VerificationService:
         * Compare mission requirements against cart contents.
         * Calculate verification_score.
         """
-        # TODO: Integrate with Mission APIs to get real mission requirements based on data.missionId
-        # TODO: Integrate with Graph APIs to understand product relationships
-        # TODO: Integrate with Cart APIs to fetch actual cart contents based on data.cartId
+        # Fetch from integration adapters
+        mission = self.integration.get_mission(data.missionId)
+        cart = self.integration.get_cart(data.cartId)
+        relationships = self.integration.get_relationships(data.missionId)
         
-        # Mock mission requirements for "BIRTHDAY"
-        mission_requirements = ["Cake", "Candles", "Drinks", "Snacks"]
-        
-        # Mock cart contents (in future fetched via Cart API)
-        cart_contents = ["Cake", "Balloons", "Drinks"]
+        mission_requirements = mission.get("requirements", [])
+        cart_contents = cart.get("contents", [])
         
         missing_items = []
         verification_score = 100
