@@ -8,6 +8,9 @@ from core.exceptions import LifeGraphException
 from domains.users.controller import UserController
 from domains.products.controller import ProductController
 from domains.carts.controller import CartController
+from domains.verification.controller import VerificationController
+from domains.risk.controller import RiskController
+from domains.prevention.controller import PreventionController
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -15,6 +18,9 @@ logger.setLevel(logging.INFO)
 user_ctrl = UserController()
 product_ctrl = ProductController()
 cart_ctrl = CartController()
+verification_ctrl = VerificationController()
+risk_ctrl = RiskController()
+prevention_ctrl = PreventionController()
 
 def handler(event, context):
     logger.info(f"Received event: {event}")
@@ -118,6 +124,18 @@ def handler(event, context):
         elif re.match(r'^/carts/[^/]+/items$', path) and method == 'POST':
             event['pathParameters'] = {'id': path.split('/')[-2]}
             return cart_ctrl.add_item(event)
+            
+        # Verification Routes
+        elif path == '/verification/verify' and method == 'POST':
+            return verification_ctrl.verify(event)
+            
+        # Risk Routes
+        elif path == '/risk/analyze' and method == 'POST':
+            return risk_ctrl.analyze(event)
+            
+        # Prevention Routes
+        elif path == '/prevent-checkout' and method == 'POST':
+            return prevention_ctrl.evaluate(event)
             
         else:
             return {
