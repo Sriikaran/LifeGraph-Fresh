@@ -1,22 +1,31 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from infrastructure.dynamodb.base_repository import BaseRepository
-from domains.memory.models import MemoryModel
+from domains.memory.models import MemoryProfileModel, MissionMemoryModel
 
 class MemoryRepository(BaseRepository):
     """Repository for managing memory data in DynamoDB."""
     
-    def save_mission_state(self, memory: MemoryModel) -> MemoryModel:
+    def get_profile(self, user_id: str) -> Optional[MemoryProfileModel]:
+        item = self.get_item(f"MEMORY#{user_id}", "PROFILE")
+        if item:
+            return MemoryProfileModel.from_dict(item)
+        return None
+
+    def upsert_profile(self, profile: MemoryProfileModel) -> MemoryProfileModel:
+        self.put_item(profile.to_dict())
+        return profile
+
+    def save_mission_state(self, mission: MissionMemoryModel) -> MissionMemoryModel:
         """Saves a mission state to DynamoDB."""
-        raise NotImplementedError("save_mission_state is not implemented.")
+        self.put_item(mission.to_dict())
+        return mission
 
-    def query_active_missions(self, user_id: str) -> List[MemoryModel]:
-        """Queries active missions for a given user."""
-        raise NotImplementedError("query_active_missions is not implemented.")
+    def query_missions(self, user_id: str, status_filter: Optional[str] = None) -> List[MissionMemoryModel]:
+        items = self.query_by_pk(f"MEMORY#{user_id}", "MISSION#")
+        missions = [MissionMemoryModel.from_dict(item) for item in items]
+        if status_filter:
+            missions = [m for m in missions if m.status == status_filter]
+        return missions
 
-    def query_completed_missions(self, user_id: str) -> List[MemoryModel]:
-        """Queries completed missions for a given user."""
-        raise NotImplementedError("query_completed_missions is not implemented.")
-
-    def get_mission_history(self, user_id: str) -> List[MemoryModel]:
-        """Retrieves the full mission history for a given user."""
-        raise NotImplementedError("get_mission_history is not implemented.")
+    def get_full_memory_context(self, user_id: str) -> List[Dict[str, Any]]:
+        return self.query_by_pk(f"MEMORY#{user_id}")

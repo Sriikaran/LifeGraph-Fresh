@@ -14,6 +14,11 @@ from domains.simulator.controller import SimulatorController
 from domains.verification.controller import VerificationController
 from domains.risk.controller import RiskController
 from domains.prevention.controller import PreventionController
+from api.controllers.mission_controller import MissionController
+from api.controllers.relationship_controller import RelationshipController
+from api.controllers.graph_controller import GraphController
+from api.controllers.workflow_controller import WorkflowController
+from agents.orchestrator.controller import OrchestratorController
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -27,6 +32,11 @@ simulator_ctrl = SimulatorController()
 verification_ctrl = VerificationController()
 risk_ctrl = RiskController()
 prevention_ctrl = PreventionController()
+mission_ctrl = MissionController()
+relationship_ctrl = RelationshipController()
+graph_ctrl = GraphController()
+workflow_ctrl = WorkflowController()
+orchestrator_ctrl = OrchestratorController()
 
 def handler(event, context):
     logger.info(f"Received event: {event}")
@@ -104,6 +114,12 @@ def handler(event, context):
         elif path == '/products' and method == 'POST':
             return product_ctrl.create_product(event)
         elif path.startswith('/products/') and method == 'GET':
+            if path.endswith('/dependencies'):
+                event['pathParameters'] = {'id': path.split('/')[-2]}
+                return graph_ctrl.get_product_dependencies(event)
+            if path.endswith('/substitutes'):
+                event['pathParameters'] = {'id': path.split('/')[-2]}
+                return graph_ctrl.get_product_substitutes(event)
             event['pathParameters'] = {'id': path.split('/')[-1]}
             return product_ctrl.get_product(event)
         elif path.startswith('/products/') and method == 'PUT':
@@ -132,24 +148,26 @@ def handler(event, context):
             return cart_ctrl.add_item(event)
             
         # Memory Routes
-        elif path == '/memory/active' and method == 'GET':
+        elif path.startswith('/memory/active/') and method == 'GET':
+            event['pathParameters'] = {'user_id': path.split('/')[-1]}
             return memory_ctrl.get_active_missions(event)
-        elif path == '/memory/history' and method == 'GET':
+        elif path.startswith('/memory/history/') and method == 'GET':
+            event['pathParameters'] = {'user_id': path.split('/')[-1]}
             return memory_ctrl.get_mission_history(event)
         elif path == '/memory/track' and method == 'POST':
             return memory_ctrl.track_mission(event)
 
         # Adaptive Routes
         elif path == '/adaptive/analyze' and method == 'POST':
-            return adaptive_ctrl.handle(event)
+            return adaptive_ctrl.analyze_behavior(event)
         elif path == '/adaptive/profile' and method == 'GET':
-            return adaptive_ctrl.handle(event)
+            return adaptive_ctrl.get_shopper_profile(event)
 
         # Simulator Routes
         elif path == '/simulator/run' and method == 'POST':
-            return simulator_ctrl.run(event)
+            return simulator_ctrl.simulate_mission(event)
         elif path == '/simulator/probability' and method == 'GET':
-            return simulator_ctrl.run(event)
+            return simulator_ctrl.get_success_probability(event)
 
         # Verification Routes
         elif path == '/verification/verify' and method == 'POST':
@@ -162,7 +180,42 @@ def handler(event, context):
         # Prevention Routes
         elif path == '/prevent-checkout' and method == 'POST':
             return prevention_ctrl.evaluate(event)
-            
+
+        # Mission Routes
+        elif path == '/missions' and method == 'GET':
+            return mission_ctrl.list_missions(event)
+        elif path == '/missions' and method == 'POST':
+            return mission_ctrl.create_mission(event)
+        elif path.startswith('/missions/') and method == 'GET':
+            if path.endswith('/requirements'):
+                event['pathParameters'] = {'id': path.split('/')[-2]}
+                return graph_ctrl.get_mission_requirements(event)
+            event['pathParameters'] = {'id': path.split('/')[-1]}
+            return mission_ctrl.get_mission(event)
+        elif path.startswith('/missions/') and method == 'PUT':
+            event['pathParameters'] = {'id': path.split('/')[-1]}
+            return mission_ctrl.update_mission(event)
+        elif path.startswith('/missions/') and method == 'DELETE':
+            event['pathParameters'] = {'id': path.split('/')[-1]}
+            return mission_ctrl.delete_mission(event)
+
+        # Relationship Routes
+        elif path == '/relationships' and method == 'GET':
+            return relationship_ctrl.list_relationships(event)
+        elif path == '/relationships' and method == 'POST':
+            return relationship_ctrl.create_relationship(event)
+        elif path.startswith('/relationships/') and method == 'DELETE':
+            event['pathParameters'] = {'id': path.split('/')[-1]}
+            return relationship_ctrl.delete_relationship(event)
+
+        # Workflow Routes
+        elif path == '/workflows/checkout' and method == 'POST':
+            return workflow_ctrl.run_checkout_workflow(event)
+
+        # Mission Orchestrator Routes
+        elif path == '/mission/execute' and method == 'POST':
+            return orchestrator_ctrl.execute_mission(event)
+
         else:
             return {
                 "statusCode": 404,
