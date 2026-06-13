@@ -3,6 +3,7 @@ from enum import Enum
 
 class RelationshipType(str, Enum):
     REQUIRES = "REQUIRES"
+    OPTIONAL = "OPTIONAL"
     DEPENDS_ON = "DEPENDS_ON"
     COMPATIBLE_WITH = "COMPATIBLE_WITH"
     SUBSTITUTES_FOR = "SUBSTITUTES_FOR"
