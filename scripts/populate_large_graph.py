@@ -18,7 +18,9 @@ def generate_graph_data():
         "HEALTH": 10,
         "TRAVEL": 10,
         "ELECTRONICS": 10,
-        "HOUSEHOLD": 10
+        "HOUSEHOLD": 10,
+        "FRESH_MEAT": 10,
+        "AMAZON_FRESH": 10
     }
     
     # Mission templates
@@ -87,14 +89,55 @@ def generate_graph_data():
             ("guest_room", "Guest Room Setup", "Make visiting guests comfortable"),
             ("bathroom_remodel", "Bathroom Essentials", "Upgrade basic towels and fixtures"),
             ("pet_dog", "Pet Dog Setup", "Prepare toys, food, and bedding for a puppy")
+        ],
+        "FRESH_MEAT": [
+            ("steak_dinner", "Steak Dinner Night", "Cook premium ribeye and strip steaks"),
+            ("chicken_prep", "Chicken Meal Prep", "Bake healthy organic chicken breast meals"),
+            ("bbq_ribs", "BBQ Ribs Cookout", "Slow cook tender pork ribs on the grill"),
+            ("sunday_roast", "Sunday Roast Beef", "Roast prime chuck beef with carrots"),
+            ("turkey_feast", "Turkey Feast", "Roast a whole golden turkey for dinner"),
+            ("seafood_bake", "Seafood Salmon Bake", "Bake fresh salmon fillets with dill"),
+            ("lamb_kebab", "Lamb Kebab Night", "Skewer and grill spiced lamb chops"),
+            ("pork_chop_dinner", "Pork Chop Roast", "Pan-sear thick-cut seasoned pork chops"),
+            ("breakfast_sausage", "Breakfast Sausage Sizzle", "Fry bacon and breakfast sausage links"),
+            ("ground_beef_tacos", "Ground Beef Tacos", "Brown seasoned lean ground beef 80/20")
+        ],
+        "AMAZON_FRESH": [
+            ("smoothie_morning", "Morning Smoothie", "Blend organic bananas, strawberries, and yogurt"),
+            ("fresh_salad", "Fresh Salad Prep", "Toss baby spinach, cherry tomatoes, and cucumbers"),
+            ("fruit_party", "Fruit Basket Party", "Slice fresh apples, grapes, pineapples, and oranges"),
+            ("cheese_board", "Dairy Cheese Board", "Arrange cheddar, gouda, brie, and crackers"),
+            ("ice_cream_sundae", "Ice Cream Sundae", "Scoop vanilla bean ice cream with syrup and cherries"),
+            ("organic_veggies", "Daily Organic Veggies", "Steam broccoli, carrots, cauliflower, and beans"),
+            ("bread_bakery", "Fresh Bread Bakery", "Slice sourdough bread and baguettes with butter"),
+            ("baking_pantry", "Baking Pantry Stock", "Stock flour, organic sugar, yeast, and vanilla"),
+            ("snack_refill", "Healthy Snack Refill", "Bag almonds, walnuts, pretzels, and dried fruit"),
+            ("morning_beverage", "Morning Beverage Brew", "Brew fresh roast coffee and organic tea")
         ]
     }
 
-    # Generate 550 unique products
-    # 110 products per category
+    # Generate 770 unique products (110 per category)
     products_by_category = {}
     for cat in categories.keys():
-        products_by_category[cat] = [f"prod_{cat.lower()}_{i}" for i in range(1, 111)]
+        if cat == "FRESH_MEAT":
+            products_by_category[cat] = [
+                "ribeye_steak", "new_york_strip", "filet_mignon", "ground_beef_80_20", "organic_chicken_breast",
+                "chicken_wings", "pork_ribs", "pork_chops", "lamb_chops", "ground_turkey", "salmon_fillets",
+                "fresh_shrimp", "smoked_bacon", "breakfast_sausage_links", "beef_brisket", "lamb_shank",
+                "turkey_breast", "duck_breast", "cod_fillets", "sea_bass", "lobster_tail", "pork_tenderloin",
+                "beef_short_ribs", "chicken_thighs", "ground_pork", "veal_chops", "chorizo_sausage", "italian_sausage"
+            ] + [f"meat_item_{i}" for i in range(29, 111)]
+        elif cat == "AMAZON_FRESH":
+            products_by_category[cat] = [
+                "organic_bananas", "honeycrisp_apples", "fresh_strawberries", "baby_spinach", "avocados",
+                "roma_tomatoes", "sweet_onions", "whole_milk_gallon", "organic_eggs_dozen", "cheddar_cheese_block",
+                "greek_yogurt_tub", "salted_butter_pack", "sour_cream", "french_baguette", "sourdough_bread_loaf",
+                "all_purpose_flour", "organic_sugar", "baking_yeast", "vanilla_extract", "raw_almonds",
+                "english_walnuts", "salted_pretzels", "dried_cranberries", "medium_roast_coffee", "green_tea_bags",
+                "fresh_broccoli", "baby_carrots", "fresh_cauliflower", "green_beans", "red_grapes", "fresh_pineapple"
+            ] + [f"fresh_item_{i}" for i in range(32, 111)]
+        else:
+            products_by_category[cat] = [f"prod_{cat.lower()}_{i}" for i in range(1, 111)]
 
     # Loop to generate missions
     for cat, num_missions in categories.items():
@@ -104,19 +147,14 @@ def generate_graph_data():
         for idx in range(num_missions):
             m_id, m_name, m_desc = templates[idx]
             
-            # Map products slice to this mission
-            # We want each mission to have 15 required products and 15 optional products
-            # With 110 products, we can offset slices based on mission index
-            # Required: slice [idx*5 : idx*5 + 15] (with wrap-around)
-            # Optional: slice [idx*5 + 15 : idx*5 + 30] (with wrap-around)
             req_list = []
             opt_list = []
             
             for offset in range(15):
-                req_idx = (idx * 6 + offset) % 110
+                req_idx = (idx * 6 + offset) % len(cat_products)
                 req_list.append(cat_products[req_idx])
                 
-                opt_idx = (idx * 6 + 15 + offset) % 110
+                opt_idx = (idx * 6 + 15 + offset) % len(cat_products)
                 opt_list.append(cat_products[opt_idx])
                 
             # Generate 5 dependencies, 5 compatibilities, 5 substitutions
@@ -126,19 +164,19 @@ def generate_graph_data():
             
             for offset in range(5):
                 src_req = req_list[offset]
-                target_p = cat_products[(idx * 6 + 30 + offset) % 110]
+                target_p = cat_products[(idx * 6 + 30 + offset) % len(cat_products)]
                 dependencies.append(DependencyMapping(source=src_req, target=target_p))
                 
                 src_opt = opt_list[offset]
-                target_c = cat_products[(idx * 6 + 40 + offset) % 110]
+                target_c = cat_products[(idx * 6 + 40 + offset) % len(cat_products)]
                 compatibility.append(CompatibilityMapping(source=src_opt, target=target_c))
                 
-                src_sub = cat_products[(idx * 6 + 50 + offset) % 110]
+                src_sub = cat_products[(idx * 6 + 50 + offset) % len(cat_products)]
                 target_sub = req_list[offset + 5]
                 substitutions.append(SubstitutionMapping(source=src_sub, target=target_sub))
 
             # Keywords
-            keywords = [cat.lower(), m_id.split("_")[0], "essentials", "mission"]
+            keywords = [cat.lower(), m_id.split("_")[0], "essentials", "fresh", "fresh_meat"]
 
             # Consumption Rules (2 per mission)
             consumption_rules = [
