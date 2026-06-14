@@ -10,6 +10,7 @@ from api.controllers.verification_controller import VerificationController
 from api.controllers.risk_controller import RiskController
 from api.controllers.prevention_controller import PreventionController
 from api.controllers.mission_controller import MissionController
+from domains.mission_detection.controller import MissionDetectionController
 from api.controllers.relationship_controller import RelationshipController
 from api.controllers.graph_controller import GraphController
 from api.controllers.workflow_controller import WorkflowController
@@ -23,7 +24,8 @@ from domains.simulator.controller import SimulatorController
 from domains.memory.schemas import MissionStateRequest
 from domains.adaptive.schemas import AdaptiveRequest
 from domains.simulator.schemas import SimulatorRequest
-from shared.schemas.engine_schemas import VerificationRequest, RiskRequest, PreventionRequest
+from shared.schemas.engine_schemas import VerificationRequest, RiskRequest, PreventionRequest, WorkflowCheckoutRequest
+from domains.mission_detection.schemas import MissionDetectionRequest
 from shared.schemas.mission_schemas import MissionCreate, MissionUpdate
 from shared.schemas.relationship_schemas import RelationshipCreate
 
@@ -49,6 +51,7 @@ verification_ctrl = VerificationController()
 risk_ctrl = RiskController()
 prevention_ctrl = PreventionController()
 mission_ctrl = MissionController()
+mission_detection_ctrl = MissionDetectionController()
 relationship_ctrl = RelationshipController()
 graph_ctrl = GraphController()
 workflow_ctrl = WorkflowController()
@@ -486,8 +489,8 @@ async def get_product_substitutes(id: str, request: Request, response: Response)
 
 # --- Workflows ---
 @app.post("/workflows/checkout")
-async def run_checkout_workflow(request: Request, response: Response):
-    event = await create_event(request)
+async def run_checkout_workflow(request: Request, response: Response, payload: WorkflowCheckoutRequest):
+    event = await create_event(request, payload)
     try:
         res = workflow_ctrl.run_checkout_workflow(event)
         return handle_controller_response(response, res)
@@ -500,6 +503,16 @@ async def execute_mission(payload: MissionExecutionRequest, request: Request, re
     event = await create_event(request, payload)
     try:
         res = orchestrator_ctrl.execute_mission(event)
+        return handle_controller_response(response, res)
+    except Exception as e:
+        return handle_exception(e, response)
+
+# --- Mission Detection ---
+@app.post("/detect-mission")
+async def detect_mission(payload: MissionDetectionRequest, request: Request, response: Response):
+    event = await create_event(request, payload)
+    try:
+        res = mission_detection_ctrl.detect_mission(event)
         return handle_controller_response(response, res)
     except Exception as e:
         return handle_exception(e, response)

@@ -1,0 +1,400 @@
+{
+  "openapi_status": 200,
+  "endpoints_found": [
+    "/users",
+    "/users/{id}",
+    "/products",
+    "/products/{id}",
+    "/carts",
+    "/carts/{id}",
+    "/carts/{id}/items",
+    "/memory/active/{user_id}",
+    "/memory/history/{user_id}",
+    "/memory/track",
+    "/adaptive/analyze",
+    "/adaptive/profile",
+    "/simulator/run",
+    "/simulator/probability",
+    "/verification/verify",
+    "/risk/analyze",
+    "/prevent-checkout",
+    "/missions",
+    "/missions/{id}",
+    "/relationships",
+    "/relationships/{id}",
+    "/missions/{id}/requirements",
+    "/products/{id}/dependencies",
+    "/products/{id}/substitutes",
+    "/workflows/checkout",
+    "/mission/execute"
+  ],
+  "tests": [
+    {
+      "method": "GET",
+      "path": "/users",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/users",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/users/u1",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/products",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/products",
+      "status_code": 422,
+      "response": {
+        "detail": [
+          {
+            "type": "missing",
+            "loc": [
+              "body",
+              "stock"
+            ],
+            "msg": "Field required",
+            "input": {
+              "product_id": "p1",
+              "name": "Cake",
+              "price": 10.0,
+              "category": "Food"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/products/p1",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/carts",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/carts",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/carts/c1/items",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/missions",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/missions",
+      "status_code": 422,
+      "response": {
+        "detail": [
+          {
+            "type": "missing",
+            "loc": [
+              "body",
+              "description"
+            ],
+            "msg": "Field required",
+            "input": {
+              "mission_id": "m1",
+              "name": "Birthday"
+            }
+          },
+          {
+            "type": "missing",
+            "loc": [
+              "body",
+              "category"
+            ],
+            "msg": "Field required",
+            "input": {
+              "mission_id": "m1",
+              "name": "Birthday"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/relationships",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/relationships",
+      "status_code": 422,
+      "response": {
+        "detail": [
+          {
+            "type": "missing",
+            "loc": [
+              "body",
+              "source_type"
+            ],
+            "msg": "Field required",
+            "input": {
+              "source_id": "m1",
+              "target_id": "p1",
+              "type": "REQUIRES"
+            }
+          },
+          {
+            "type": "missing",
+            "loc": [
+              "body",
+              "target_type"
+            ],
+            "msg": "Field required",
+            "input": {
+              "source_id": "m1",
+              "target_id": "p1",
+              "type": "REQUIRES"
+            }
+          },
+          {
+            "type": "missing",
+            "loc": [
+              "body",
+              "relationship_type"
+            ],
+            "msg": "Field required",
+            "input": {
+              "source_id": "m1",
+              "target_id": "p1",
+              "type": "REQUIRES"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/missions/m1/requirements",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/products/p1/dependencies",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/verification/verify",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/risk/analyze",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "'GraphRepository' object has no attribute 'query_prefix'"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/prevent-checkout",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "'PreventionRequest' object has no attribute 'missionId'"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/memory/active/u1",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/memory/track",
+      "status_code": 422,
+      "response": {
+        "detail": [
+          {
+            "type": "missing",
+            "loc": [
+              "body",
+              "mission_name"
+            ],
+            "msg": "Field required",
+            "input": {
+              "user_id": "u1",
+              "mission_id": "m1",
+              "status": "ACTIVE",
+              "context": {}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/adaptive/analyze",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/simulator/run",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/workflows/checkout",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/mission/execute",
+      "status_code": 500,
+      "response": {
+        "success": false,
+        "error": {
+          "code": "INTERNAL_ERROR",
+          "message": "Unable to locate credentials"
+        }
+      }
+    }
+  ]
+}

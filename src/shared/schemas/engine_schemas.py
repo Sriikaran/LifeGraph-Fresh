@@ -8,6 +8,8 @@ class VerificationRequest(BaseModel):
 class VerificationResponseData(BaseModel):
     verification_score: int
     missing_items: List[str]
+    readiness_score: int = 0
+    recommended_additions: List[str] = []
 
 class RiskRequest(BaseModel):
     verification_score: int
@@ -22,7 +24,12 @@ class RiskResponseData(BaseModel):
 
 class PreventionRequest(BaseModel):
     cartId: str
+    missionId: str
 
 class PreventionResponseData(BaseModel):
     allow_checkout: bool
     reason: str
+
+class WorkflowCheckoutRequest(BaseModel):
+    missionId: str
+    cartId: str

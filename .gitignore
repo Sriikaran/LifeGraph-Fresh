@@ -10,3 +10,14 @@ venv/
 dist/
 build/
 .aws-sam/
+
+backup_graph.json
+import_out.log
+temp_payload.json
+.system_generated/
+*.log
+__pycache__/
+.pytest_cache/
+person2_output.txt
+openapi_output.json
+audit_results.txt

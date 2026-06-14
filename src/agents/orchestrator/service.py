@@ -4,11 +4,11 @@ from datetime import datetime
 from agents.base_agent import BaseAgent
 from agents.mission_agent import MissionAgent
 from agents.memory_agent import MemoryAgent
-from agents.verification_agent import VerificationAgent
-from agents.risk_agent import RiskAgent
+from domains.verification.service import VerificationService
+from domains.risk.service import RiskService
 from agents.adaptive_agent import AdaptiveAgent
 from agents.simulator_agent import SimulatorAgent
-from agents.prevention_agent import PreventionAgent
+from domains.prevention.service import PreventionService
 from agents.orchestrator.workflow_manager import WorkflowManager
 from agents.orchestrator.response_builder import ResponseBuilder
 from agents.orchestrator.schemas import MissionExecutionRequest, MissionExecutionResponse
@@ -31,11 +31,11 @@ class OrchestratorService(BaseAgent):
         super().__init__(name="OrchestratorAgent")
         self.mission_agent = MissionAgent()
         self.memory_agent = MemoryAgent()
-        self.verification_agent = VerificationAgent()
-        self.risk_agent = RiskAgent()
+        self.verification_service = VerificationService()
+        self.risk_service = RiskService()
         self.adaptive_agent = AdaptiveAgent()
         self.simulator_agent = SimulatorAgent()
-        self.prevention_agent = PreventionAgent()
+        self.prevention_service = PreventionService()
         
         self.graph_service = GraphService()
         self.product_service = ProductService()
@@ -165,7 +165,7 @@ class OrchestratorService(BaseAgent):
             missionId=state["missionId"],
             cartId=state["cartId"]
         )
-        res = self.verification_agent.execute("verify", req)
+        res = self.verification_service.verify(req)
         state["verification_data"] = res.dict()
         
         # Emit VerificationCompletedEvent
@@ -186,7 +186,7 @@ class OrchestratorService(BaseAgent):
             verification_score=verification.get("verification_score", 0),
             missing_items=verification.get("missing_items", [])
         )
-        res = self.risk_agent.execute("analyze", req)
+        res = self.risk_service.analyze(req)
         state["risk_data"] = res.dict()
         
         # Emit RiskCalculatedEvent
@@ -239,6 +239,7 @@ class OrchestratorService(BaseAgent):
     def _step_run_checkout_prevention(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Determines if checkout can proceed."""
         req = PreventionRequest(
+            missionId=state["missionId"],
             cartId=state["cartId"]
         )
         
@@ -249,8 +250,8 @@ class OrchestratorService(BaseAgent):
         
         strict_mode = adaptive.get("adapted_rules", {}).get("strict_mode", False)
         
-        # Execute Prevention Agent
-        res = self.prevention_agent.execute("evaluate", req)
+        # Execute Prevention Service
+        res = self.prevention_service.evaluate(req)
         
         # Apply strict mode validation rules
         if strict_mode and verification.get("verification_score", 100) < 80:

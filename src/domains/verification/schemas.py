@@ -8,3 +8,5 @@ class VerificationRequest(BaseModel):
 class VerificationResponseData(BaseModel):
     verification_score: int
     missing_items: List[str]
+    readiness_score: int = 0
+    recommended_additions: List[str] = []
