@@ -16,9 +16,18 @@ class ProductController:
             price=product.price, 
             stock=product.stock, 
             category=product.category,
+            title=product.title,
+            image=product.image,
+            brand=product.brand,
+            mrp=product.mrp,
+            rating=product.rating,
+            reviews=product.reviews,
             subcategory=product.subcategory,
+            deliveryDays=product.deliveryDays,
+            description=product.description,
             semanticTags=product.semanticTags,
             missionHints=product.missionHints,
+            prime=product.prime,
             embeddingText=product.embeddingText
         )
         return {
@@ -35,9 +44,18 @@ class ProductController:
             price=product.price, 
             stock=product.stock, 
             category=product.category,
+            title=product.title,
+            image=product.image,
+            brand=product.brand,
+            mrp=product.mrp,
+            rating=product.rating,
+            reviews=product.reviews,
             subcategory=product.subcategory,
+            deliveryDays=product.deliveryDays,
+            description=product.description,
             semanticTags=product.semanticTags,
             missionHints=product.missionHints,
+            prime=product.prime,
             embeddingText=product.embeddingText
         )
         return {
@@ -56,9 +74,18 @@ class ProductController:
             price=product.price, 
             stock=product.stock, 
             category=product.category,
+            title=product.title,
+            image=product.image,
+            brand=product.brand,
+            mrp=product.mrp,
+            rating=product.rating,
+            reviews=product.reviews,
             subcategory=product.subcategory,
+            deliveryDays=product.deliveryDays,
+            description=product.description,
             semanticTags=product.semanticTags,
             missionHints=product.missionHints,
+            prime=product.prime,
             embeddingText=product.embeddingText
         )
         return {
@@ -84,15 +111,11 @@ class ProductController:
         
         response = [
             ProductResponse(
-                id=p.id, 
-                name=p.name, 
-                price=p.price, 
-                stock=p.stock, 
-                category=p.category,
-                subcategory=p.subcategory,
-                semanticTags=p.semanticTags,
-                missionHints=p.missionHints,
-                embeddingText=p.embeddingText
+                id=p.id, name=p.name, price=p.price, stock=p.stock, category=p.category,
+                title=p.title, image=p.image, brand=p.brand, mrp=p.mrp, rating=p.rating,
+                reviews=p.reviews, subcategory=p.subcategory, deliveryDays=p.deliveryDays,
+                description=p.description, semanticTags=p.semanticTags, missionHints=p.missionHints,
+                prime=p.prime, embeddingText=p.embeddingText
             ).model_dump() for p in products
         ]
         return {
