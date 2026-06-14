@@ -1,0 +1,135 @@
+Mission,Product,Required,Dependency,Substitute
+CHICKEN_BIRYANI,Chicken,YES,Biryani Masala,Mutton
+CHICKEN_BIRYANI,Basmati Rice,YES,NULL,Regular Rice
+CHICKEN_BIRYANI,Biryani Masala,YES,Chicken,Homemade Masala
+CHICKEN_BIRYANI,Curd,YES,NULL,Yogurt
+CHICKEN_BIRYANI,Onion,YES,NULL,Shallots
+CHICKEN_BIRYANI,Ginger Garlic Paste,YES,NULL,Fresh Ginger Garlic
+CHICKEN_BIRYANI,Cooking Oil,YES,NULL,Ghee
+CHICKEN_BIRYANI,Coriander Leaves,YES,NULL,Mint Leaves
+
+PASTA_DINNER,Pasta,YES,Pasta Sauce,Noodles
+PASTA_DINNER,Pasta Sauce,YES,Garlic,White Sauce
+PASTA_DINNER,Cheese,YES,NULL,Parmesan
+PASTA_DINNER,Garlic,YES,NULL,Garlic Powder
+PASTA_DINNER,Vegetables,YES,NULL,Frozen Veg Mix
+PASTA_DINNER,Olive Oil,YES,NULL,Butter
+PASTA_DINNER,Black Pepper,YES,NULL,Chili Flakes
+PASTA_DINNER,Mushrooms,YES,NULL,Sweet Corn
+
+BREAKFAST,Bread,YES,Butter,Buns
+BREAKFAST,Butter,YES,NULL,Jam
+BREAKFAST,Eggs,YES,NULL,Paneer
+BREAKFAST,Milk,YES,NULL,Almond Milk
+BREAKFAST,Cereal,YES,Milk,Oats
+BREAKFAST,Banana,YES,NULL,Apple
+BREAKFAST,Coffee Powder,YES,Milk,Tea Powder
+BREAKFAST,Sugar,YES,NULL,Honey
+
+WEEKLY_GROCERIES,Rice,YES,NULL,Wheat Flour
+WEEKLY_GROCERIES,Wheat Flour,YES,NULL,Rice Flour
+WEEKLY_GROCERIES,Milk,YES,NULL,Almond Milk
+WEEKLY_GROCERIES,Eggs,YES,NULL,Paneer
+WEEKLY_GROCERIES,Cooking Oil,YES,NULL,Ghee
+WEEKLY_GROCERIES,Sugar,YES,NULL,Jaggery
+WEEKLY_GROCERIES,Toor Dal,YES,NULL,Moong Dal
+WEEKLY_GROCERIES,Salt,YES,NULL,Rock Salt
+
+HOUSE_PARTY,Soft Drinks,YES,Ice Cubes,Fruit Juice
+HOUSE_PARTY,Chips,YES,NULL,Nachos
+HOUSE_PARTY,Paper Plates,YES,NULL,Reusable Plates
+HOUSE_PARTY,Cups,YES,NULL,Reusable Cups
+HOUSE_PARTY,Cake,YES,Candles,Cupcakes
+HOUSE_PARTY,Candles,YES,Matchbox,LED Candles
+HOUSE_PARTY,Ice Cubes,YES,NULL,Crushed Ice
+HOUSE_PARTY,Party Decorations,YES,Tape,Balloons
+
+MOVIE_NIGHT,Popcorn,YES,NULL,Nachos
+MOVIE_NIGHT,Soft Drinks,YES,Ice Cubes,Fruit Juice
+MOVIE_NIGHT,Chocolate,YES,NULL,Cookies
+MOVIE_NIGHT,Chips,YES,NULL,Crackers
+MOVIE_NIGHT,Ice Cream,YES,NULL,Frozen Yogurt
+MOVIE_NIGHT,Tissues,YES,NULL,Wet Wipes
+MOVIE_NIGHT,Nachos,YES,Dip,Popcorn
+MOVIE_NIGHT,Dip,YES,NULL,Salsa
+
+ROAD_TRIP,Water Bottles,YES,NULL,Electrolyte Drink
+ROAD_TRIP,Snacks,YES,NULL,Protein Bars
+ROAD_TRIP,Power Bank,YES,Charging Cable,Car Charger
+ROAD_TRIP,Charging Cable,YES,NULL,Wireless Charger
+ROAD_TRIP,First Aid Kit,YES,NULL,Medical Pouch
+ROAD_TRIP,Sunglasses,YES,NULL,Cap
+ROAD_TRIP,Hand Sanitizer,YES,NULL,Wet Wipes
+ROAD_TRIP,Phone Mount,YES,NULL,Dashboard Holder
+
+CAMPING_TRIP,Tent,YES,Tent Pegs,Sleeping Bag
+CAMPING_TRIP,Flashlight,YES,Batteries,Headlamp
+CAMPING_TRIP,Batteries,YES,NULL,Rechargeable Battery
+CAMPING_TRIP,Power Bank,YES,Charging Cable,Solar Charger
+CAMPING_TRIP,Water Bottles,YES,NULL,Water Filter
+CAMPING_TRIP,First Aid Kit,YES,NULL,Medical Pouch
+CAMPING_TRIP,Camping Stove,YES,Fuel Canister,Portable Grill
+CAMPING_TRIP,Fuel Canister,YES,NULL,Firewood
+
+SICK_DAY_RECOVERY,Paracetamol,YES,NULL,Ibuprofen
+SICK_DAY_RECOVERY,Thermometer,YES,NULL,Digital Thermometer
+SICK_DAY_RECOVERY,ORS,YES,NULL,Electrolyte Drink
+SICK_DAY_RECOVERY,Soup Packets,YES,NULL,Instant Noodles
+SICK_DAY_RECOVERY,Tissues,YES,NULL,Wet Wipes
+SICK_DAY_RECOVERY,Vitamin C,YES,NULL,Multivitamins
+SICK_DAY_RECOVERY,Honey,YES,NULL,Jaggery
+SICK_DAY_RECOVERY,Green Tea,YES,NULL,Herbal Tea
+
+BABY_CARE,Diapers,YES,NULL,Training Pants
+BABY_CARE,Baby Wipes,YES,NULL,Cotton Wipes
+BABY_CARE,Baby Lotion,YES,NULL,Baby Cream
+BABY_CARE,Baby Powder,YES,NULL,Moisturizer
+BABY_CARE,Baby Formula,YES,Baby Bottle,Breast Milk Storage Bag
+BABY_CARE,Baby Bottle,YES,NULL,Sippy Cup
+BABY_CARE,Baby Soap,YES,NULL,Baby Wash
+BABY_CARE,Baby Blanket,YES,NULL,Swaddle
+
+PET_CARE,Pet Food,YES,NULL,Homemade Pet Food
+PET_CARE,Pet Treats,YES,NULL,Chew Sticks
+PET_CARE,Pet Shampoo,YES,NULL,Pet Soap
+PET_CARE,Pet Toys,YES,NULL,Chew Toy
+PET_CARE,Pet Bowl,YES,NULL,Feeding Tray
+PET_CARE,Pet Leash,YES,NULL,Harness
+PET_CARE,Pet Waste Bags,YES,NULL,Trash Bags
+PET_CARE,Flea Treatment,YES,NULL,Anti Tick Spray
+
+WORK_FROM_HOME,Coffee,YES,Milk,Tea
+WORK_FROM_HOME,Milk,YES,NULL,Almond Milk
+WORK_FROM_HOME,Notebook,YES,NULL,Digital Notes
+WORK_FROM_HOME,Pens,YES,NULL,Pencils
+WORK_FROM_HOME,Headphones,YES,NULL,Earbuds
+WORK_FROM_HOME,Power Bank,YES,Charging Cable,UPS
+WORK_FROM_HOME,Snacks,YES,NULL,Protein Bars
+WORK_FROM_HOME,Water Bottle,YES,NULL,Tumbler
+
+GYM_JOURNEY,Protein Powder,YES,Shaker,Mass Gainer
+GYM_JOURNEY,Shaker,YES,NULL,Water Bottle
+GYM_JOURNEY,Bananas,YES,NULL,Dates
+GYM_JOURNEY,Peanut Butter,YES,NULL,Almond Butter
+GYM_JOURNEY,Oats,YES,NULL,Muesli
+GYM_JOURNEY,Electrolyte Drink,YES,NULL,Coconut Water
+GYM_JOURNEY,Gym Gloves,YES,NULL,Wrist Straps
+GYM_JOURNEY,Chicken Breast,YES,NULL,Paneer
+
+HOUSEWARMING,Sweets Box,YES,NULL,Dry Fruit Box
+HOUSEWARMING,Marigold Garland,YES,Tape,Flower Decor
+HOUSEWARMING,Pooja Kit,YES,Incense Sticks,Havan Kit
+HOUSEWARMING,Incense Sticks,YES,NULL,Camphor
+HOUSEWARMING,Decorative Lights,YES,Extension Cord,LED Lamps
+HOUSEWARMING,Extension Cord,YES,NULL,Power Strip
+HOUSEWARMING,Return Gifts,YES,NULL,Potted Plant
+HOUSEWARMING,Paper Plates,YES,NULL,Reusable Plates
+
+BIRTHDAY_PARTY,Cake,YES,Candles,Cupcakes
+BIRTHDAY_PARTY,Candles,YES,Matchbox,LED Candles
+BIRTHDAY_PARTY,Balloons,YES,Air Pump,Paper Decorations
+BIRTHDAY_PARTY,Air Pump,YES,NULL,Manual Pump
+BIRTHDAY_PARTY,Soft Drinks,YES,Ice Cubes,Fruit Juice
+BIRTHDAY_PARTY,Chips,YES,NULL,Nachos
+BIRTHDAY_PARTY,Paper Plates,YES,NULL,Reusable Plates
+BIRTHDAY_PARTY,Return Gifts,YES,NULL,Chocolate Packs

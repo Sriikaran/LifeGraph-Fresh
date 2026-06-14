@@ -36,7 +36,7 @@ class PreventionService:
         allow_checkout = True
         reason = ""
         
-        if actual_risk_score >= 70 or actual_verification_score < 30:
+        if actual_risk_score >= 70 or actual_verification_score < 80:
             allow_checkout = False
             reason = "High risk or low verification score detected. Checkout blocked."
         elif actual_risk_score >= 30:

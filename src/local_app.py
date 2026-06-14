@@ -24,7 +24,8 @@ from domains.simulator.controller import SimulatorController
 from domains.memory.schemas import MissionStateRequest
 from domains.adaptive.schemas import AdaptiveRequest
 from domains.simulator.schemas import SimulatorRequest
-from shared.schemas.engine_schemas import VerificationRequest, RiskRequest, PreventionRequest
+from shared.schemas.engine_schemas import VerificationRequest, RiskRequest, PreventionRequest, WorkflowCheckoutRequest
+from domains.mission_detection.schemas import MissionDetectionRequest
 from shared.schemas.mission_schemas import MissionCreate, MissionUpdate
 from shared.schemas.relationship_schemas import RelationshipCreate
 
@@ -462,8 +463,8 @@ async def get_product_substitutes(id: str, request: Request, response: Response)
 
 # --- Workflows ---
 @app.post("/workflows/checkout")
-async def run_checkout_workflow(request: Request, response: Response):
-    event = await create_event(request)
+async def run_checkout_workflow(request: Request, response: Response, payload: WorkflowCheckoutRequest):
+    event = await create_event(request, payload)
     try:
         res = workflow_ctrl.run_checkout_workflow(event)
         return handle_controller_response(response, res)
@@ -482,8 +483,8 @@ async def execute_mission(payload: MissionExecutionRequest, request: Request, re
 
 # --- Mission Detection ---
 @app.post("/detect-mission")
-async def detect_mission(request: Request, response: Response):
-    event = await create_event(request)
+async def detect_mission(payload: MissionDetectionRequest, request: Request, response: Response):
+    event = await create_event(request, payload)
     try:
         res = mission_detection_ctrl.detect_mission(event)
         return handle_controller_response(response, res)

@@ -24,7 +24,12 @@ class RiskResponseData(BaseModel):
 
 class PreventionRequest(BaseModel):
     cartId: str
+    missionId: str
 
 class PreventionResponseData(BaseModel):
     allow_checkout: bool
     reason: str
+
+class WorkflowCheckoutRequest(BaseModel):
+    missionId: str
+    cartId: str

@@ -8,3 +8,4 @@ class MissionDetectionResponse(BaseModel):
     detected_mission: str
     confidence: float
     matched_keywords: List[str]
+    suggested_missions: List[str] = []
