@@ -2,6 +2,7 @@ import json
 import logging
 import re
 import math
+import os
 from typing import Dict, Any, List
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
@@ -25,15 +26,18 @@ MOCK_VOCAB = [
 class BedrockClient:
     def __init__(self, config: BedrockConfig = None):
         self.config = config or BedrockConfig()
-        self.use_mock = False
+        self.use_mock = os.getenv("MOCK_BEDROCK", "false").lower() == "true"
         self.claude_available = None
         self.nova_available = None
-        try:
-            self.client = boto3.client("bedrock-runtime", region_name=self.config.aws_region)
-        except Exception as e:
-            logger.warning(f"Could not initialize boto3 Bedrock client: {e}. Using mock mode.")
+        if not self.use_mock:
+            try:
+                self.client = boto3.client("bedrock-runtime", region_name=self.config.aws_region)
+            except Exception as e:
+                logger.warning(f"Could not initialize boto3 Bedrock client: {e}. Using mock mode.")
+                self.client = None
+                self.use_mock = True
+        else:
             self.client = None
-            self.use_mock = True
 
     def check_claude_available(self) -> bool:
         """Checks if Claude model access is active and approved on this account."""

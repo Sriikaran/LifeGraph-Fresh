@@ -167,11 +167,12 @@ Return ONLY the valid JSON object, no other explanation or wrapper tags.
 
         # --- Phase 5 & 9: Bedrock Re-Ranking / Fallback Layer ---
         nova_available = self.bedrock_client.check_nova_available()
+        use_reranker = nova_available or self.bedrock_client.use_mock
         selected_id = None
         llm_confidence = 0.85 # Fallback LLM confidence
         rerank_reason = "Bypassed LLM re-ranking due to Nova unavailability (Phase 9 fallback)."
 
-        if nova_available:
+        if use_reranker:
             candidate_list_str = "\n".join([
                 f"- mission_id: \"{m.mission_id}\", name: \"{m.name}\", description: \"{m.description}\""
                 for m, _ in top_candidates

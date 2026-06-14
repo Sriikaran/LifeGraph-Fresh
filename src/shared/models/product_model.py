@@ -5,7 +5,7 @@ class ProductModel:
                  title: str = "", brand: str = "", subcategory: str = "", description: str = "",
                  mrp: float = 0.0, rating: float = 0.0, reviews: int = 0, image: str = "",
                  prime: bool = False, deliveryDays: int = 3, semanticTags: List[str] = None,
-                 missionHints: List[str] = None):
+                 missionHints: List[str] = None, embeddingText: str = ""):
         self.id = id
         self.name = name
         self.price = price
@@ -23,16 +23,19 @@ class ProductModel:
         self.deliveryDays = deliveryDays
         self.semanticTags = semanticTags or []
         self.missionHints = missionHints or []
+        self.embeddingText = embeddingText
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ProductModel':
+        name = data.get('name') or data.get('title') or ''
+        title = data.get('title') or data.get('name') or ''
         return cls(
             id=data.get('id', ''),
-            name=data.get('name', ''),
+            name=name,
             price=float(data.get('price', 0.0)),
             stock=int(data.get('stock', 0)),
             category=data.get('category', ''),
-            title=data.get('title', ''),
+            title=title,
             brand=data.get('brand', ''),
             subcategory=data.get('subcategory', ''),
             description=data.get('description', ''),
@@ -43,7 +46,8 @@ class ProductModel:
             prime=bool(data.get('prime', False)),
             deliveryDays=int(data.get('deliveryDays', 3)),
             semanticTags=data.get('semanticTags', []),
-            missionHints=data.get('missionHints', [])
+            missionHints=data.get('missionHints', []),
+            embeddingText=data.get('embeddingText', '')
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -69,6 +73,7 @@ class ProductModel:
             'deliveryDays': self.deliveryDays,
             'semanticTags': self.semanticTags,
             'missionHints': self.missionHints,
+            'embeddingText': self.embeddingText,
             'GSI1PK': f"CATEGORY#{self.category}",
             'GSI1SK': f"PRODUCT#{self.id}"
         }

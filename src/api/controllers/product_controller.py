@@ -15,7 +15,11 @@ class ProductController:
             name=product.name, 
             price=product.price, 
             stock=product.stock, 
-            category=product.category
+            category=product.category,
+            subcategory=product.subcategory,
+            semanticTags=product.semanticTags,
+            missionHints=product.missionHints,
+            embeddingText=product.embeddingText
         )
         return {
             "statusCode": 201,
@@ -30,7 +34,11 @@ class ProductController:
             name=product.name, 
             price=product.price, 
             stock=product.stock, 
-            category=product.category
+            category=product.category,
+            subcategory=product.subcategory,
+            semanticTags=product.semanticTags,
+            missionHints=product.missionHints,
+            embeddingText=product.embeddingText
         )
         return {
             "statusCode": 200,
@@ -47,7 +55,11 @@ class ProductController:
             name=product.name, 
             price=product.price, 
             stock=product.stock, 
-            category=product.category
+            category=product.category,
+            subcategory=product.subcategory,
+            semanticTags=product.semanticTags,
+            missionHints=product.missionHints,
+            embeddingText=product.embeddingText
         )
         return {
             "statusCode": 200,
@@ -72,7 +84,15 @@ class ProductController:
         
         response = [
             ProductResponse(
-                id=p.id, name=p.name, price=p.price, stock=p.stock, category=p.category
+                id=p.id, 
+                name=p.name, 
+                price=p.price, 
+                stock=p.stock, 
+                category=p.category,
+                subcategory=p.subcategory,
+                semanticTags=p.semanticTags,
+                missionHints=p.missionHints,
+                embeddingText=p.embeddingText
             ).model_dump() for p in products
         ]
         return {

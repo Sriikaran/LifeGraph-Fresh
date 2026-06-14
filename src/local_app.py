@@ -1,5 +1,5 @@
 import json
-from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi import FastAPI, Request, Response, HTTPException, UploadFile, File
 from pydantic import ValidationError, BaseModel
 from core.exceptions import LifeGraphException
 
@@ -32,8 +32,7 @@ from shared.schemas.relationship_schemas import RelationshipCreate
 from agents.orchestrator.controller import OrchestratorController
 from agents.orchestrator.schemas import MissionExecutionRequest
 
-from api.controllers.graph_seeder_controller import GraphSeederController
-from shared.schemas.graph_seeder_schemas import MissionSeedRequest, BulkMissionSeedRequest
+# Seeder imports removed
 
 app = FastAPI(
     title="Amazon LifeGraph",
@@ -56,7 +55,7 @@ relationship_ctrl = RelationshipController()
 graph_ctrl = GraphController()
 workflow_ctrl = WorkflowController()
 orchestrator_ctrl = OrchestratorController()
-seeder_ctrl = GraphSeederController()
+# seeder_ctrl removed
 
 async def create_event(request: Request, payload: BaseModel = None) -> dict:
     """Adapts a FastAPI Request into an AWS API Gateway event format."""
@@ -507,34 +506,43 @@ async def execute_mission(payload: MissionExecutionRequest, request: Request, re
     except Exception as e:
         return handle_exception(e, response)
 
-# --- Mission Detection ---
-@app.post("/detect-mission")
-async def detect_mission(payload: MissionDetectionRequest, request: Request, response: Response):
-    event = await create_event(request, payload)
+# --- Admin Ingestion Routes ---
+@app.post("/admin/import-products", tags=["Admin"])
+async def import_products(file: UploadFile = File(...)):
+    from data_ingestion.pipeline import import_products_from_bytes
     try:
-        res = mission_detection_ctrl.detect_mission(event)
-        return handle_controller_response(response, res)
+        content = await file.read()
+        res = import_products_from_bytes(content, file.filename)
+        return res
     except Exception as e:
-        return handle_exception(e, response)
+        raise HTTPException(status_code=500, detail=str(e))
 
-# --- Knowledge Graph Seeding ---
-@app.post("/graph/seed-mission", tags=["Knowledge Graph"])
-async def seed_mission(payload: MissionSeedRequest, request: Request, response: Response):
-    event = await create_event(request, payload)
+@app.post("/admin/import-missions", tags=["Admin"])
+async def import_missions():
+    from data_ingestion.pipeline import import_missions_pipeline
     try:
-        res = seeder_ctrl.seed_mission(event)
-        return handle_controller_response(response, res)
+        res = import_missions_pipeline()
+        return res
     except Exception as e:
-        return handle_exception(e, response)
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/graph/seed-bulk", tags=["Knowledge Graph"])
-async def seed_bulk(payload: BulkMissionSeedRequest, request: Request, response: Response):
-    event = await create_event(request, payload)
+@app.get("/admin/data-quality-report", tags=["Admin"])
+async def data_quality_report():
+    from data_ingestion.pipeline import generate_data_quality_report
     try:
-        res = seeder_ctrl.seed_bulk(event)
-        return handle_controller_response(response, res)
+        res = generate_data_quality_report()
+        return res
     except Exception as e:
-        return handle_exception(e, response)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/admin/enrich-products", tags=["Admin"])
+async def enrich_products():
+    from data_ingestion.pipeline import enrich_products_pipeline
+    try:
+        res = enrich_products_pipeline()
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # --- Agents Swagger Testing Layer ---
 from shared.schemas.agent_test_schemas import (
@@ -599,7 +607,13 @@ async def test_memory(payload: MemoryTestRequest):
 @app.post("/agents/adaptive/test", response_model=AdaptiveTestResponse, tags=["Agents"])
 async def test_adaptive(payload: AdaptiveTestRequest):
     try:
-        return agent_test_service.test_adaptive(payload.user_id)
+        return agent_test_service.test_adaptive(
+            payload.user_id,
+            mission_id=payload.mission_id or "",
+            mission_category=payload.mission_category or "",
+            cart_size=payload.cart_size or 0,
+            urgency=payload.urgency or "",
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -623,3 +637,84 @@ async def test_system_status():
         return agent_test_service.test_system_status()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- Phase 8: Diagnostics Endpoints ---
+@app.get("/agents/debug/agent-health", tags=["Diagnostics"])
+async def agent_health():
+    """Returns V2 data consumption status for all agents."""
+    from graph.service import GraphService
+    gs = GraphService()
+    
+    # Check if a sample mission has V2 data
+    sample_mission = "birthday_party"
+    has_weights = len(gs.get_mission_requirements_weighted(sample_mission)) > 0
+    has_rules = len(gs.get_mission_rules(sample_mission)) > 0
+    has_intents = len(gs.get_mission_intents(sample_mission)) > 0
+    has_metadata = gs.get_mission_metadata(sample_mission) is not None
+    
+    return {
+        "verification": {
+            "using_v2_weights": True,
+            "graph_has_weighted_requirements": has_weights,
+        },
+        "risk": {
+            "using_v2_rules": True,
+            "graph_has_rules": has_rules,
+            "dimensions": ["completion", "quantity", "compatibility", "timing", "budget"],
+        },
+        "simulator": {
+            "using_simulation_rules": True,
+            "graph_has_rules": has_rules,
+        },
+        "adaptive": {
+            "using_user_history": True,
+            "personas": ["Event Planner", "Festival Shopper", "Monthly Grocery Shopper",
+                         "Travel Planner", "Student Shopper", "Health Focused Shopper",
+                         "Emergency Buyer", "Research Buyer"],
+        },
+        "memory": {
+            "using_v2_mission_records": True,
+            "schema": "USER#{user_id} / MISSION#ACTIVE#{id} | MISSION#COMPLETED#{id}",
+        },
+    }
+
+@app.get("/agents/debug/mission/{mission_id}", tags=["Diagnostics"])
+async def debug_mission(mission_id: str):
+    """Returns full V2 graph data for a mission."""
+    from graph.service import GraphService
+    gs = GraphService()
+    
+    metadata = gs.get_mission_metadata(mission_id)
+    weighted_reqs = gs.get_mission_requirements_weighted(mission_id)
+    rules = gs.get_mission_rules(mission_id)
+    parameters = gs.get_mission_parameters(mission_id)
+    intents = gs.get_mission_intents(mission_id)
+    synonyms = gs.get_mission_synonyms(mission_id)
+    requirements = gs.get_mission_requirements(mission_id)
+
+    # Classify requirements by priority
+    critical = [r for r in weighted_reqs if r.get("priority", "IMPORTANT") == "CRITICAL"]
+    important = [r for r in weighted_reqs if r.get("priority", "IMPORTANT") == "IMPORTANT"]
+    optional = [r for r in weighted_reqs if r.get("priority", "IMPORTANT") == "OPTIONAL"]
+
+    return {
+        "mission_id": mission_id,
+        "metadata": {
+            "name": metadata.get("name", "") if metadata else "",
+            "description": metadata.get("description", "") if metadata else "",
+            "category": metadata.get("category", "") if metadata else "",
+        },
+        "weighted_requirements": weighted_reqs,
+        "priority_breakdown": {
+            "critical": [r["product_id"] for r in critical],
+            "important": [r["product_id"] for r in important],
+            "optional": [r["product_id"] for r in optional],
+        },
+        "simulation_rules": rules,
+        "parameters": parameters,
+        "intent_count": len(intents),
+        "synonym_count": len(synonyms),
+        "relationship_count": len(requirements),
+        "has_metadata": metadata is not None,
+        "has_embedding": bool(metadata and metadata.get("embedding")),
+    }

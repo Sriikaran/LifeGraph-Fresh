@@ -11,7 +11,7 @@ class MemoryProfileModel:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'MemoryProfileModel':
         return cls(
-            user_id=data.get('user_id', ''),
+            user_id=data.get('user_id', '') or (data.get('PK', '').split('#')[1] if 'USER#' in data.get('PK', '') or 'MEMORY#' in data.get('PK', '') else ''),
             preferences=data.get('preferences', {}),
             adaptive_score=float(data.get('adaptive_score', 0.0)),
             updated_at=data.get('updated_at', '')
@@ -19,7 +19,7 @@ class MemoryProfileModel:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'PK': f"MEMORY#{self.user_id}",
+            'PK': f"USER#{self.user_id}",
             'SK': "PROFILE",
             'user_id': self.user_id,
             'preferences': self.preferences,
@@ -38,18 +38,36 @@ class MissionMemoryModel:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'MissionMemoryModel':
+        sk = data.get('SK', '')
+        status = data.get('status', '')
+        mission_id = data.get('mission_id', '')
+        if not status:
+            if 'ACTIVE' in sk:
+                status = 'ACTIVE'
+            elif 'COMPLETED' in sk:
+                status = 'COMPLETED'
+            else:
+                status = 'ACTIVE'
+        if not mission_id:
+            parts = sk.split('#')
+            if len(parts) >= 3:
+                mission_id = parts[2]
+            elif len(parts) >= 2:
+                mission_id = parts[1]
+
         return cls(
-            user_id=data.get('user_id', ''),
-            mission_id=data.get('mission_id', ''),
-            mission_name=data.get('mission_name', ''),
-            status=data.get('status', ''),
+            user_id=data.get('user_id', '') or (data.get('PK', '').split('#')[1] if 'USER#' in data.get('PK', '') or 'MEMORY#' in data.get('PK', '') else ''),
+            mission_id=mission_id,
+            mission_name=data.get('mission_name', '') or data.get('missionId', '') or mission_id,
+            status=status,
             completed_at=data.get('completed_at', '')
         )
 
     def to_dict(self) -> Dict[str, Any]:
+        status_str = "ACTIVE" if self.status == "ACTIVE" else "COMPLETED"
         return {
-            'PK': f"MEMORY#{self.user_id}",
-            'SK': f"MISSION#{self.mission_id}",
+            'PK': f"USER#{self.user_id}",
+            'SK': f"MISSION#{status_str}#{self.mission_id}",
             'user_id': self.user_id,
             'mission_id': self.mission_id,
             'mission_name': self.mission_name,

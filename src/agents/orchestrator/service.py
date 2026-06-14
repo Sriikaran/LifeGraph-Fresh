@@ -105,10 +105,17 @@ class OrchestratorService(BaseAgent):
         """Loads mission context and requirements from DynamoDB via MissionAgent."""
         mission_id = state["missionId"]
         
-        # Bypass for legacy test fixtures
-        if mission_id == "BIRTHDAY":
-            state["mission_data"] = {"mission_id": "BIRTHDAY", "name": "Birthday Party", "category": "GROCERY"}
+        # Try to load mission from graph metadata first
+        metadata = self.graph_service.get_mission_metadata(mission_id)
+        if metadata:
+            state["mission_data"] = {
+                "mission_id": metadata.get("mission_id", mission_id),
+                "name": metadata.get("name", f"Mission {mission_id}"),
+                "category": metadata.get("category", ""),
+                "description": metadata.get("description", ""),
+            }
         else:
+            # Try MissionAgent
             try:
                 mission = self.mission_agent.execute("get", mission_id)
                 state["mission_data"] = mission.to_dict()
@@ -121,13 +128,21 @@ class OrchestratorService(BaseAgent):
                     detected_id = res["mission_id"]
                     state["missionId"] = detected_id
                     state["detection_data"] = res
-                    try:
-                        mission = self.mission_agent.execute("get", detected_id)
-                        state["mission_data"] = mission.to_dict()
-                        mission_id = detected_id
-                    except Exception:
-                        state["mission_data"] = {"mission_id": detected_id, "name": f"Mission {detected_id}"}
-                        mission_id = detected_id
+                    # Try graph metadata for detected mission
+                    detected_meta = self.graph_service.get_mission_metadata(detected_id)
+                    if detected_meta:
+                        state["mission_data"] = {
+                            "mission_id": detected_meta.get("mission_id", detected_id),
+                            "name": detected_meta.get("name", f"Mission {detected_id}"),
+                            "category": detected_meta.get("category", ""),
+                        }
+                    else:
+                        try:
+                            mission = self.mission_agent.execute("get", detected_id)
+                            state["mission_data"] = mission.to_dict()
+                        except Exception:
+                            state["mission_data"] = {"mission_id": detected_id, "name": f"Mission {detected_id}"}
+                    mission_id = detected_id
                 else:
                     state["mission_data"] = {"mission_id": mission_id, "name": f"Mission {mission_id}"}
             
@@ -143,6 +158,20 @@ class OrchestratorService(BaseAgent):
             loaded_at=datetime.utcnow().isoformat()
         )
         self.emit_event("MissionLoadedEvent", event.dict())
+        # Store active mission state in Memory Repository/Agent (Phase 11 V2 schema support)
+        try:
+            from domains.memory.schemas import MissionStateRequest
+            from domains.memory.service import MemoryService
+            memory_service = MemoryService()
+            memory_service.track_mission(MissionStateRequest(
+                user_id=state["userId"],
+                mission_id=mission_id,
+                mission_name=state["mission_data"].get("name", mission_id),
+                status="ACTIVE"
+            ))
+        except Exception:
+            pass
+
         return state
 
     def _step_retrieve_memory(self, state: Dict[str, Any]) -> Dict[str, Any]:
@@ -160,7 +189,7 @@ class OrchestratorService(BaseAgent):
         return state
 
     def _step_run_verification(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        """Compares cart against requirements."""
+        """Compares cart against requirements using V2 weighted priorities."""
         req = VerificationRequest(
             missionId=state["missionId"],
             cartId=state["cartId"]
@@ -177,14 +206,34 @@ class OrchestratorService(BaseAgent):
             completed_at=datetime.utcnow().isoformat()
         )
         self.emit_event("VerificationCompletedEvent", event.dict())
+
+        # Update cart's detected mission and readiness score in DynamoDB (Phase 9 V2 schema support)
+        try:
+            from domains.carts.repository import CartRepository
+            cart_repo = CartRepository()
+            cart = cart_repo.get_cart(state["cartId"])
+            if cart:
+                cart.detected_mission = state["missionId"]
+                cart.readiness_score = res.verification_score
+                cart_repo.update_cart(cart)
+        except Exception:
+            pass
+
         return state
 
     def _step_run_risk_analysis(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        """Calculates budget, quantity, and compatibility risk scores."""
+        """Calculates multi-dimensional risk using V2 graph data."""
         verification = state.get("verification_data", {})
+        context = state.get("context", {})
+        
         req = RiskRequest(
             verification_score=verification.get("verification_score", 0),
-            missing_items=verification.get("missing_items", [])
+            missing_items=verification.get("missing_items", []),
+            mission_id=state["missionId"],
+            cart_id=state["cartId"],
+            user_id=state["userId"],
+            critical_completion=verification.get("critical_completion", 0.0),
+            context=context if context else None,
         )
         res = self.risk_service.analyze(req)
         state["risk_data"] = res.dict()
@@ -201,13 +250,19 @@ class OrchestratorService(BaseAgent):
         return state
 
     def _step_run_adaptive_logic(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        """Adjusts scoring limits or rules dynamically based on context."""
+        """V2 Adaptive: determines persona from mission context and user history."""
         user_id = state["userId"]
         context = state.get("context", {})
+        mission_data = state.get("mission_data", {})
         
-        # Load user execution history context
-        history = [state["missionId"]]
-        adaptive_res = self.adaptive_agent.execute("adapt", {"user_id": user_id, "history": history})
+        adaptive_res = self.adaptive_agent.execute("adapt", {
+            "user_id": user_id,
+            "mission_id": state["missionId"],
+            "mission_category": mission_data.get("category", ""),
+            "cart_size": len(state.get("required_products", [])),
+            "urgency": context.get("urgency", ""),
+            "history": [state["missionId"]],
+        })
         
         # Inject urgency to strictMode if context demands it
         if context.get("urgency") == "HIGH":
@@ -217,58 +272,104 @@ class OrchestratorService(BaseAgent):
         return state
 
     def _step_run_outcome_simulation(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        """Predicts probability of mission success."""
+        """V2 Simulation: uses mission rules, guest_count, and cart contents."""
         user_id = state["userId"]
-        risk = state.get("risk_data", {})
-        scenario = "high_risk" if risk.get("risk_score", 0) >= 70 else "normal"
+        context = state.get("context", {})
         
-        res = self.simulator_agent.execute("simulate", {"user_id": user_id, "scenario": scenario})
+        # Build cart products list
+        cart_products = []
+        try:
+            from domains.carts.repository import CartRepository
+            cart_repo = CartRepository()
+            cart_items = cart_repo.get_cart_items(state["cartId"])
+            for ci in cart_items:
+                cart_products.append({"product": ci.product_id, "quantity": int(ci.quantity)})
+        except Exception:
+            pass
+        
+        guest_count_val = context.get("guest_count")
+        guest_count = int(guest_count_val) if guest_count_val is not None else 1
+        
+        res = self.simulator_agent.execute("simulate", {
+            "user_id": user_id,
+            "mission_id": state["missionId"],
+            "guest_count": guest_count,
+            "cart_products": cart_products,
+        })
         state["simulation_data"] = res
         
         # Emit SimulationCompletedEvent
         event = SimulationCompletedEvent(
             user_id=user_id,
-            scenario=scenario,
-            outcome=res.get("outcome", "success"),
-            details=res.get("details", {}),
+            scenario=f"mission_{state['missionId']}",
+            outcome="success" if res.get("success_probability", 0) >= 70 else "risk",
+            details={"success_probability": res.get("success_probability", 0)},
             completed_at=datetime.utcnow().isoformat()
         )
         self.emit_event("SimulationCompletedEvent", event.dict())
         return state
 
     def _step_run_checkout_prevention(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        """Determines if checkout can proceed."""
-        req = PreventionRequest(
-            missionId=state["missionId"],
-            cartId=state["cartId"]
-        )
-        
-        # Prevention Agent override using custom context rules
+        """Determines if checkout can proceed based on V2 verification and risk data."""
         verification = state.get("verification_data", {})
         risk = state.get("risk_data", {})
         adaptive = state.get("adaptive_data", {})
         
         strict_mode = adaptive.get("adapted_rules", {}).get("strict_mode", False)
         
-        # Execute Prevention Service
-        res = self.prevention_service.evaluate(req)
+        # V2 Prevention Logic: use actual verification and risk data
+        readiness = verification.get("verification_score", 0)
+        critical_missing = verification.get("critical_missing", [])
+        overall_risk = risk.get("risk_score", 0)
         
-        # Apply strict mode validation rules
-        if strict_mode and verification.get("verification_score", 100) < 80:
-            res.allow_checkout = False
-            res.reason = "Urgent mission strict mode active. Verification score must be at least 80%."
-            
-        state["prevention_data"] = res.dict()
+        allow_checkout = True
+        reason = ""
+        
+        # Block if critical items are missing
+        if critical_missing:
+            allow_checkout = False
+            reason = f"Missing critical items: {', '.join(c.replace('_', ' ').title() for c in critical_missing)}."
+        
+        # Block if overall risk is too high
+        if overall_risk >= 70:
+            allow_checkout = False
+            reason = reason or f"Overall risk is too high ({overall_risk}%)."
+        
+        # Strict mode: block if readiness < 80%
+        if strict_mode and readiness < 80:
+            allow_checkout = False
+            reason = reason or f"Urgent mission strict mode active. Readiness ({readiness}%) must be at least 80%."
+        
+        state["prevention_data"] = {
+            "allow_checkout": allow_checkout,
+            "reason": reason,
+        }
         
         # Emit CheckoutDecisionEvent
         event = CheckoutDecisionEvent(
             user_id=state["userId"],
             cart_id=state["cartId"],
-            allow_checkout=res.allow_checkout,
-            blocking_issues=[res.reason] if not res.allow_checkout else [],
+            allow_checkout=allow_checkout,
+            blocking_issues=[reason] if not allow_checkout else [],
             decided_at=datetime.utcnow().isoformat()
         )
         self.emit_event("CheckoutDecisionEvent", event.dict())
+
+        # Track completed mission state in Memory Repository/Agent (Phase 11 V2 schema support)
+        if allow_checkout:
+            try:
+                from domains.memory.schemas import MissionStateRequest
+                from domains.memory.service import MemoryService
+                memory_service = MemoryService()
+                memory_service.track_mission(MissionStateRequest(
+                    user_id=state["userId"],
+                    mission_id=state["missionId"],
+                    mission_name=state["mission_data"].get("name", state["missionId"]),
+                    status="COMPLETED"
+                ))
+            except Exception:
+                pass
+
         return state
 
     def _step_generate_recommendations(self, state: Dict[str, Any]) -> Dict[str, Any]:
@@ -278,11 +379,6 @@ class OrchestratorService(BaseAgent):
         
         recs = []
         for item_name in missing_items:
-            # Traversal Graph substitute search
-            # We look up substitutes using graph engine or default list mapping
-            # In our mock environment, let's map names to placeholder substitutes or actual products if available
-            product_id = f"SUB_{item_name.upper()}"
-            
             # Query graph for potential substitutes
             substitutes = []
             try:
@@ -290,13 +386,13 @@ class OrchestratorService(BaseAgent):
             except Exception:
                 pass
                 
-            sub_name = substitutes[0] if substitutes else f"Premium {item_name}"
+            sub_name = substitutes[0] if substitutes else f"Premium {item_name.replace('_', ' ').title()}"
             
             recs.append({
-                "product_id": product_id,
+                "product_id": f"SUB_{item_name.upper()}",
                 "name": sub_name,
                 "price": 45.0,
-                "reason": f"Required for mission {state['missionId']}. Substitute for missing {item_name}."
+                "reason": f"Required for mission {state['missionId']}. Substitute for missing {item_name.replace('_', ' ')}."
             })
             
         state["recommendations_data"] = recs

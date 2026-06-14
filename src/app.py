@@ -25,7 +25,7 @@ from api.controllers.relationship_controller import RelationshipController
 from api.controllers.graph_controller import GraphController
 from api.controllers.workflow_controller import WorkflowController
 from agents.orchestrator.controller import OrchestratorController
-from api.controllers.graph_seeder_controller import GraphSeederController
+# Seeder import removed
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -44,7 +44,7 @@ relationship_ctrl = RelationshipController()
 graph_ctrl = GraphController()
 workflow_ctrl = WorkflowController()
 orchestrator_ctrl = OrchestratorController()
-seeder_ctrl = GraphSeederController()
+# seeder_ctrl removed
 
 def handler(event, context):
     logger.info(f"Received event: {event}")
@@ -229,11 +229,66 @@ def handler(event, context):
             mission_detection_ctrl = MissionDetectionController()
             return mission_detection_ctrl.detect_mission(event)
 
-        # Knowledge Graph Seeding Routes
-        elif path == '/graph/seed-mission' and method == 'POST':
-            return seeder_ctrl.seed_mission(event)
-        elif path == '/graph/seed-bulk' and method == 'POST':
-            return seeder_ctrl.seed_bulk(event)
+        # Admin Ingestion Routes
+        elif path == '/admin/import-products' and method == 'POST':
+            body = event.get('body', b'')
+            if event.get('isBase64Encoded', False):
+                import base64
+                body = base64.b64decode(body)
+            elif isinstance(body, str):
+                body = body.encode('utf-8')
+            
+            content_type = ""
+            for k, v in event.get('headers', {}).items():
+                if k.lower() == 'content-type':
+                    content_type = v
+                    break
+            
+            filename = "products.xlsx"
+            file_bytes = body
+            
+            if "multipart/form-data" in content_type:
+                import email
+                msg_str = f"Content-Type: {content_type}\r\n\r\n".encode('utf-8') + body
+                msg = email.message_from_bytes(msg_str)
+                if msg.is_multipart():
+                    for part in msg.walk():
+                        if part.get_filename():
+                            filename = part.get_filename()
+                            file_bytes = part.get_payload(decode=True)
+                            break
+            
+            from data_ingestion.pipeline import import_products_from_bytes
+            res = import_products_from_bytes(file_bytes, filename)
+            return {
+                "statusCode": 200,
+                "body": json.dumps(res)
+            }
+            
+        elif path == '/admin/import-missions' and method == 'POST':
+            from data_ingestion.pipeline import import_missions_pipeline
+            res = import_missions_pipeline()
+            return {
+                "statusCode": 200,
+                "body": json.dumps(res)
+            }
+            
+        elif path == '/admin/data-quality-report' and method == 'GET':
+            from data_ingestion.pipeline import generate_data_quality_report
+            res = generate_data_quality_report()
+            return {
+                "statusCode": 200,
+                "body": json.dumps(res)
+            }
+            
+        elif path == '/admin/enrich-products' and method == 'POST':
+            from data_ingestion.pipeline import enrich_products_pipeline
+            res = enrich_products_pipeline()
+            return {
+                "statusCode": 200,
+                "body": json.dumps(res)
+            }
+
         else:
             return {
                 "statusCode": 404,

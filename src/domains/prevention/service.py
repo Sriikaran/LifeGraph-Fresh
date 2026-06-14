@@ -14,34 +14,35 @@ class PreventionService:
 
     def evaluate(self, data: PreventionRequest) -> PreventionResponseData:
         """
-        Business Logic:
-        * Decide allowCheckout based on verification and risk.
-        * Return reason / warnings.
+        V2 Prevention Logic:
+        * Check product dependencies from the graph.
+        * Block checkout if required dependencies are missing.
         """
-        # Call VerificationService
-        # Pass the dynamic missionId from the request
-        verification_req = VerificationRequest(missionId=data.missionId, cartId=data.cartId)
-        verification_res = self.verification_service.verify(verification_req)
-        
-        # Call RiskService
-        risk_req = RiskRequest(
-            verification_score=verification_res.verification_score,
-            missing_items=verification_res.missing_items
-        )
-        risk_res = self.risk_service.analyze(risk_req)
-        
-        actual_verification_score = verification_res.verification_score
-        actual_risk_score = risk_res.risk_score
-        
+        from graph.service import GraphService
+        from domains.carts.repository import CartRepository
+
+        graph_service = GraphService()
         allow_checkout = True
         reason = ""
-        
-        if actual_risk_score >= 70 or actual_verification_score < 80:
-            allow_checkout = False
-            reason = "High risk or low verification score detected. Checkout blocked."
-        elif actual_risk_score >= 30:
-            reason = "Medium risk detected. Please review your cart."
-            
+
+        try:
+            cart_repo = CartRepository()
+            cart_items = cart_repo.get_cart_items(data.cartId)
+            cart_product_ids = [ci.product_id.lower() for ci in cart_items]
+
+            missing_deps = []
+            for p_id in cart_product_ids:
+                deps = graph_service.get_product_dependencies(p_id)
+                for dep in deps:
+                    if dep.lower() not in cart_product_ids and dep not in missing_deps:
+                        missing_deps.append(dep)
+
+            if missing_deps:
+                allow_checkout = False
+                reason = f"Missing required dependencies: {', '.join(d.replace('_', ' ').title() for d in missing_deps)}."
+        except Exception:
+            reason = "Unable to verify product dependencies."
+
         return PreventionResponseData(
             allow_checkout=allow_checkout,
             reason=reason

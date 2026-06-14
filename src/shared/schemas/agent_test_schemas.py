@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 class MissionDetectionTestRequest(BaseModel):
     query: str
@@ -22,6 +22,13 @@ class VerificationTestResponse(BaseModel):
     readiness_score: int
     required_items: List[str]
     missing_items: List[str]
+    critical_completion: float = 0.0
+    important_completion: float = 0.0
+    optional_completion: float = 0.0
+    critical_missing: List[str] = []
+    important_missing: List[str] = []
+    optional_missing: List[str] = []
+    recommended_products: List[str] = []
 
 class RiskTestRequest(BaseModel):
     mission_id: str
@@ -31,6 +38,8 @@ class RiskTestResponse(BaseModel):
     completion_risk: int
     quantity_risk: int
     compatibility_risk: int
+    timing_risk: int = 0
+    budget_risk: int = 0
     overall_risk: int
 
 class SimulatorProductInput(BaseModel):
@@ -43,8 +52,12 @@ class SimulatorTestRequest(BaseModel):
     products: List[SimulatorProductInput]
 
 class SimulatorTestResponse(BaseModel):
+    required_products: Dict[str, int] = {}
+    available_products: Dict[str, int] = {}
+    quantity_gaps: Dict[str, int] = {}
     success_probability: float
-    warnings: List[str]
+    assumptions: List[str] = []
+    warnings: List[str] = []
 
 class PreventionTestRequest(BaseModel):
     products: List[str]
@@ -59,9 +72,14 @@ class MemoryTestRequest(BaseModel):
 class MemoryTestResponse(BaseModel):
     active_missions: List[str]
     completed_missions: List[str]
+    recurring_missions: List[str] = []
 
 class AdaptiveTestRequest(BaseModel):
     user_id: str
+    mission_id: Optional[str] = ""
+    mission_category: Optional[str] = ""
+    cart_size: Optional[int] = 0
+    urgency: Optional[str] = ""
 
 class AdaptiveTestResponse(BaseModel):
     shopper_type: str

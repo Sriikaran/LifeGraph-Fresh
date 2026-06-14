@@ -68,198 +68,300 @@ class AgentTestService:
         }
 
     def test_verification(self, mission_id: str, products: List[str]) -> Dict[str, Any]:
-        requirements = self.graph_service.get_mission_requirements(mission_id)
-        if not requirements:
-            requirements = ["cake", "candles", "plates", "drinks"]
-            
-        # Normalize comparison to case-insensitive
+        """V2 Verification: uses weighted requirements classified by priority."""
+        reqs_weighted = self.graph_service.get_mission_requirements_weighted(mission_id)
         products_lower = [p.lower() for p in products]
-        
-        missing_items = []
-        for req in requirements:
-            if req.lower() not in products_lower:
-                missing_items.append(req)
-                
-        readiness_score = 100
-        if requirements:
-            readiness_score = int(round(((len(requirements) - len(missing_items)) / len(requirements)) * 100))
-            
+
+        # Classify by priority
+        critical_items = [r for r in reqs_weighted if r.get("priority", "IMPORTANT").upper() == "CRITICAL"]
+        important_items = [r for r in reqs_weighted if r.get("priority", "IMPORTANT").upper() == "IMPORTANT"]
+        optional_items = [r for r in reqs_weighted if r.get("priority", "IMPORTANT").upper() == "OPTIONAL"]
+
+        def calc_completion(items_list):
+            if not items_list:
+                return 1.0, [], []
+            total_weight = sum(i["weight"] for i in items_list)
+            present_weight = 0
+            missing = []
+            present = []
+            for i in items_list:
+                if i["product_id"].lower() in products_lower:
+                    present_weight += i["weight"]
+                    present.append(i["product_id"])
+                else:
+                    missing.append(i["product_id"])
+            completion = present_weight / total_weight if total_weight > 0 else 1.0
+            return completion, missing, present
+
+        critical_completion, critical_missing, _ = calc_completion(critical_items)
+        important_completion, important_missing, _ = calc_completion(important_items)
+        optional_completion, optional_missing, _ = calc_completion(optional_items)
+
+        readiness_score = int(round((
+            (critical_completion * 0.70) +
+            (important_completion * 0.20) +
+            (optional_completion * 0.10)
+        ) * 100))
+
+        all_missing = critical_missing + important_missing + optional_missing
+        all_required = [r["product_id"] for r in reqs_weighted]
+
         return {
             "readiness_score": readiness_score,
-            "required_items": requirements,
-            "missing_items": missing_items
+            "required_items": all_required,
+            "missing_items": all_missing,
+            "critical_completion": round(critical_completion, 2),
+            "important_completion": round(important_completion, 2),
+            "optional_completion": round(optional_completion, 2),
+            "critical_missing": critical_missing,
+            "important_missing": important_missing,
+            "optional_missing": optional_missing,
+            "recommended_products": critical_missing + important_missing,
         }
 
     def test_risk(self, mission_id: str, products: List[str]) -> Dict[str, Any]:
+        """V2 Risk: multi-dimensional risk derived from graph data."""
         verification_res = self.test_verification(mission_id, products)
-        missing_count = len(verification_res["missing_items"])
-        required_count = len(verification_res["required_items"])
-        
-        completion_risk = 0
-        if required_count > 0:
-            completion_risk = int(round((missing_count / required_count) * 100))
-            
-        # Overall risk is primarily completion risk in our simplified test representation
-        overall_risk = completion_risk
-        
+        critical_completion = verification_res.get("critical_completion", 1.0)
+
+        # 1. Completion risk
+        completion_risk = int(round((1.0 - critical_completion) * 100))
+
+        # 2. Quantity risk (from rules)
+        quantity_risk = 0
+        rules = self.graph_service.get_mission_rules(mission_id)
+        if rules:
+            products_lower = [p.lower() for p in products]
+            total_products_with_rules = len(rules)
+            products_with_gaps = 0
+            for rule in rules:
+                product = rule["product"].lower()
+                if product not in products_lower:
+                    products_with_gaps += 1
+            if total_products_with_rules > 0:
+                quantity_risk = int(round((products_with_gaps / total_products_with_rules) * 100))
+
+        # 3. Compatibility risk (dependencies)
+        compatibility_risk = 0
+        products_lower = [p.lower() for p in products]
+        missing_deps_count = 0
+        total_deps = 0
+        for p in products:
+            deps = self.graph_service.get_product_dependencies(p.lower())
+            for dep in deps:
+                total_deps += 1
+                if dep.lower() not in products_lower:
+                    missing_deps_count += 1
+        if total_deps > 0:
+            compatibility_risk = int(round((missing_deps_count / total_deps) * 100))
+
+        # Overall risk (weighted)
+        overall_risk = int(round(
+            (completion_risk * 0.40) +
+            (quantity_risk * 0.25) +
+            (compatibility_risk * 0.15) +
+            (0 * 0.10) +  # timing_risk (no date context in test)
+            (0 * 0.10)    # budget_risk (no budget context in test)
+        ))
+
         return {
             "completion_risk": completion_risk,
-            "quantity_risk": 0,
-            "compatibility_risk": 0,
-            "overall_risk": overall_risk
+            "quantity_risk": quantity_risk,
+            "compatibility_risk": compatibility_risk,
+            "timing_risk": 0,
+            "budget_risk": 0,
+            "overall_risk": overall_risk,
         }
 
     def test_simulator(self, mission_id: str, guest_count: int, products: List[Dict[str, Any]]) -> Dict[str, Any]:
-        # Fetch consumption rules from DynamoDB
-        table = get_table()
-        key_condition = Key('PK').eq(f"MISSION#{mission_id}") & Key('SK').begins_with("RULE#")
-        response = table.query(KeyConditionExpression=key_condition)
-        items = response.get("Items", [])
-        
-        rules = {}
-        for item in items:
-            product_name = item.get("product")
-            if product_name:
-                rules[product_name.lower()] = float(item.get("serves_per_unit", 1.0))
-                
-        # Mock rule fallbacks to ensure test consistency
-        if "cake" not in rules:
-            rules["cake"] = 10.0
-            
-        warnings = []
+        """V2 Simulator: graph-driven simulation using rules and cart quantities."""
+        # Fetch consumption rules from graph
+        rules = self.graph_service.get_mission_rules(mission_id)
+        rules_map = {}
+        for rule in rules:
+            rules_map[rule["product"].lower()] = rule["serves_per_unit"]
+
+        # Get all required products
+        reqs_weighted = self.graph_service.get_mission_requirements_weighted(mission_id)
+
+        # Build cart map
+        cart_map = {}
         for prod_input in products:
             p_name = prod_input.get("product", "").lower()
             quantity = int(prod_input.get("quantity", 1))
-            if p_name in rules:
-                serves_per_unit = rules[p_name]
-                total_serves = quantity * serves_per_unit
-                if total_serves < guest_count:
-                    warnings.append(f"{p_name.capitalize()} quantity may only serve {int(total_serves)} guests.")
-                    
-        # If products list is empty and cake is required, add warning
-        if not products and mission_id == "birthday_party":
-            warnings.append("Cake quantity may only serve 0 guests.")
+            cart_map[p_name] = cart_map.get(p_name, 0) + quantity
 
-        # success probability: base is 1.0 (or 100%). Deduct if warning.
-        success_probability = 1.0
-        if warnings:
-            # Default mock value 0.62 if warning exists
-            success_probability = 0.62
-            
+        required_products = {}
+        available_products = {}
+        quantity_gaps = {}
+        assumptions = []
+        warnings = []
+
+        total_weight = 0
+        covered_weight = 0
+
+        for req in reqs_weighted:
+            product_id = req["product_id"].lower()
+            weight = req["weight"]
+            priority = req.get("priority", "IMPORTANT")
+
+            if product_id in rules_map:
+                serves_per_unit = rules_map[product_id]
+                required_qty = math.ceil(guest_count / serves_per_unit) if serves_per_unit > 0 else guest_count
+                assumptions.append(f"One {product_id.replace('_', ' ')} serves {int(serves_per_unit)} guests.")
+            else:
+                required_qty = guest_count
+                assumptions.append(f"{product_id.replace('_', ' ').capitalize()} estimated at 1 per guest.")
+
+            required_products[product_id] = required_qty
+            available_qty = cart_map.get(product_id, 0)
+
+            if available_qty > 0:
+                available_products[product_id] = available_qty
+
+            gap = max(0, required_qty - available_qty)
+            if gap > 0:
+                quantity_gaps[product_id] = gap
+                warnings.append(f"{product_id.replace('_', ' ').capitalize()} quantity may only serve {int(available_qty * rules_map.get(product_id, 1))} guests.")
+
+            # Weight-based coverage
+            priority_multiplier = 3.0 if priority == "CRITICAL" else (1.5 if priority == "IMPORTANT" else 1.0)
+            effective_weight = weight * priority_multiplier
+            total_weight += effective_weight
+
+            if available_qty >= required_qty:
+                covered_weight += effective_weight
+            elif available_qty > 0:
+                coverage_ratio = available_qty / required_qty
+                covered_weight += effective_weight * coverage_ratio
+
+        if total_weight > 0:
+            success_probability = round((covered_weight / total_weight) * 100, 2)
+        else:
+            success_probability = 100.0
+
+        success_probability = max(0, min(100, success_probability))
+
         return {
+            "required_products": required_products,
+            "available_products": available_products,
+            "quantity_gaps": quantity_gaps,
             "success_probability": success_probability,
-            "warnings": warnings
+            "assumptions": assumptions,
+            "warnings": warnings,
         }
 
     def test_prevention(self, products: List[str]) -> Dict[str, Any]:
-        table = get_table()
+        """V2 Prevention: checks product dependencies from graph."""
         products_lower = [p.lower() for p in products]
         
         missing_dependencies = []
         checkout_allowed = True
         
         for p in products:
-            key_condition = Key('PK').eq(f"PRODUCT#{p}") & Key('SK').begins_with("DEPENDS_ON#PRODUCT#")
-            response = table.query(KeyConditionExpression=key_condition)
-            items = response.get("Items", [])
-            for item in items:
-                sk = item.get("SK", "")
-                parts = sk.split("#")
-                if len(parts) >= 3:
-                    dep = parts[2]
-                    if dep.lower() not in products_lower:
+            deps = self.graph_service.get_product_dependencies(p.lower())
+            for dep in deps:
+                if dep.lower() not in products_lower:
+                    if dep not in missing_dependencies:
                         missing_dependencies.append(dep)
-                        checkout_allowed = False
-                        
-        # Mock rule fallback for tent -> tent_stakes
-        if "tent" in products_lower and "tent_stakes" not in products_lower:
-            if "tent_stakes" not in missing_dependencies:
-                missing_dependencies.append("tent_stakes")
-            checkout_allowed = False
-            
+                    checkout_allowed = False
+                    
         return {
             "checkout_allowed": checkout_allowed,
             "missing_dependencies": missing_dependencies
         }
 
     def test_memory(self, user_id: str) -> Dict[str, Any]:
+        """V2 Memory: returns active, completed, and recurring missions."""
         history = self.memory_service.get_mission_history(user_id)
         active = history.get("active", [])
         completed = history.get("completed", [])
+
+        # Detect recurring
+        mission_counts = {}
+        for m in completed:
+            mission_counts[m.mission_id] = mission_counts.get(m.mission_id, 0) + 1
+        recurring = [mid for mid, count in mission_counts.items() if count > 1]
+
         return {
             "active_missions": [m.mission_id for m in active],
-            "completed_missions": [m.mission_id for m in completed]
+            "completed_missions": [m.mission_id for m in completed],
+            "recurring_missions": recurring,
         }
 
-    def test_adaptive(self, user_id: str) -> Dict[str, Any]:
-        profile = self.adaptive_service.get_shopper_profile(user_id)
-        shopper_type = profile.shopper_type if hasattr(profile, 'shopper_type') else "BALANCED"
-        intervention_mode = profile.intervention_mode if hasattr(profile, 'intervention_mode') else "MODERATE"
-        
-        # Mappings
-        shopper_type_map = {
-            "BALANCED": "Research Buyer",
-            "MISSION_DRIVEN": "Goal Oriented",
-            "EXPLORER": "Window Shopper"
-        }
-        intervention_map = {
-            "MODERATE": "Detailed",
-            "STRICT": "Strict",
-            "FLEXIBLE": "Flexible"
-        }
-        
+    def test_adaptive(self, user_id: str, mission_id: str = "", mission_category: str = "", cart_size: int = 0, urgency: str = "") -> Dict[str, Any]:
+        """V2 Adaptive: persona engine driven by mission context and user history."""
+        # Try to get category from graph if not provided
+        if not mission_category and mission_id:
+            metadata = self.graph_service.get_mission_metadata(mission_id)
+            if metadata:
+                mission_category = metadata.get("category", "")
+
+        # Get user history
+        history = self.memory_service.get_mission_history(user_id)
+        active = history.get("active", [])
+        completed = history.get("completed", [])
+        total = len(active) + len(completed)
+        completion_rate = len(completed) / total if total > 0 else 0.0
+
+        # Determine persona
+        from agents.adaptive_agent import AdaptiveAgent
+        agent = AdaptiveAgent()
+        result = agent.execute("adapt", {
+            "user_id": user_id,
+            "mission_id": mission_id,
+            "mission_category": mission_category,
+            "cart_size": cart_size,
+            "urgency": urgency,
+        })
+
         return {
-            "shopper_type": shopper_type_map.get(shopper_type, shopper_type),
-            "recommended_intervention": intervention_map.get(intervention_mode, intervention_mode)
+            "shopper_type": result.get("shopper_type", "Research Buyer"),
+            "recommended_intervention": result.get("recommended_intervention", ""),
         }
 
     def test_graph(self, mission_id: str) -> Dict[str, Any]:
-        table = get_table()
-        # Query metadata
-        res = table.get_item(Key={"PK": f"MISSION#{mission_id}", "SK": "METADATA"})
-        item = res.get("Item", {})
-        
-        required_list = item.get("required", [])
-        optional_list = item.get("optional", [])
-        
-        # Fallbacks for birthday_party if empty
-        if not required_list and mission_id == "birthday_party":
-            required_list = ["cake", "candles", "plates", "drinks"]
-            
+        """V2 Graph: retrieves full mission graph data."""
+        metadata = self.graph_service.get_mission_metadata(mission_id)
+
+        required_list = []
+        optional_list = []
+
+        # Get from weighted requirements
+        reqs = self.graph_service.get_mission_requirements_weighted(mission_id)
+        for r in reqs:
+            if r.get("required", True):
+                required_list.append(r["product_id"])
+            else:
+                optional_list.append(r["product_id"])
+
+        # If weighted requirements returned nothing, try metadata
+        if not required_list and metadata:
+            required_list = metadata.get("required", [])
+            optional_list = metadata.get("optional", [])
+
         # Extract relations dynamically
         dependencies = []
         substitutions = []
         compatibility = []
-        
+
         all_referenced_products = set(required_list + optional_list)
         for p in all_referenced_products:
-            # Query depends_on
-            key_condition = Key('PK').eq(f"PRODUCT#{p}") & Key('SK').begins_with("DEPENDS_ON#PRODUCT#")
-            response = table.query(KeyConditionExpression=key_condition)
-            for item in response.get("Items", []):
-                sk = item.get("SK", "")
-                parts = sk.split("#")
-                if len(parts) >= 3:
-                    dependencies.append({"source": p, "target": parts[2]})
-                    
-            # Query substitutes
-            key_condition = Key('PK').eq(f"PRODUCT#{p}") & Key('SK').begins_with("SUBSTITUTES_FOR#PRODUCT#")
-            response = table.query(KeyConditionExpression=key_condition)
-            for item in response.get("Items", []):
-                sk = item.get("SK", "")
-                parts = sk.split("#")
-                if len(parts) >= 3:
-                    substitutions.append({"source": p, "target": parts[2]})
-                    
-            # Query compatibility
-            key_condition = Key('PK').eq(f"PRODUCT#{p}") & Key('SK').begins_with("COMPATIBLE_WITH#PRODUCT#")
-            response = table.query(KeyConditionExpression=key_condition)
-            for item in response.get("Items", []):
-                sk = item.get("SK", "")
-                parts = sk.split("#")
-                if len(parts) >= 3:
-                    compatibility.append({"source": p, "target": parts[2]})
-                    
+            # Dependencies
+            deps = self.graph_service.get_product_dependencies(p)
+            for dep in deps:
+                dependencies.append({"source": p, "target": dep})
+
+            # Substitutes
+            subs = self.graph_service.get_product_substitutes(p)
+            for sub in subs:
+                substitutions.append({"source": p, "target": sub})
+
+            # Compatibility
+            comps = self.graph_service.get_product_compatibility(p)
+            for comp in comps:
+                compatibility.append({"source": p, "target": comp})
+
         return {
             "mission": mission_id,
             "required": required_list,
@@ -270,53 +372,87 @@ class AgentTestService:
         }
 
     def test_orchestrator(self, query: str) -> Dict[str, Any]:
+        """V2 Orchestrator: end-to-end pipeline with explainable outputs."""
         # 1. Mission Detection
         detection_res = self.test_mission_detection(query)
         detected_mission = detection_res["detected_mission"]
         guest_count = detection_res["parameters"].get("guest_count", 15)
-        
-        # 2. Get requirements
+
+        # 2. Get mission metadata
+        metadata = self.graph_service.get_mission_metadata(detected_mission)
+        mission_name = metadata.get("name", detected_mission) if metadata else detected_mission
+        mission_category = metadata.get("category", "") if metadata else ""
+
+        # 3. Get requirements
         graph_res = self.test_graph(detected_mission)
         reqs = graph_res["required"]
-        
+
         # Create a mock cart containing a subset of requirements (e.g. first 50%)
-        # This simulates a partially completed cart for verification/risk
         mock_cart_products = []
         if reqs:
             half_len = max(1, len(reqs) // 2)
             mock_cart_products = reqs[:half_len]
-        else:
-            mock_cart_products = ["cake", "candles"]
-            
-        # 3. Verification
+
+        # 4. Verification (V2)
         verification_res = self.test_verification(detected_mission, mock_cart_products)
-        
-        # 4. Risk
+
+        # 5. Risk (V2)
         risk_res = self.test_risk(detected_mission, mock_cart_products)
-        
-        # 5. Simulation
-        # Map mock products to simulator format
+
+        # 6. Simulation (V2)
         sim_products_input = [{"product": p, "quantity": 1} for p in mock_cart_products]
         simulator_res = self.test_simulator(detected_mission, guest_count, sim_products_input)
-        
-        # 6. Prevention
+
+        # 7. Prevention (V2)
         prevention_res = self.test_prevention(mock_cart_products)
-        
-        # 7. Adaptive
-        adaptive_res = self.test_adaptive("demo_user")
-        
-        # 8. Memory
+
+        # 8. Adaptive (V2)
+        adaptive_res = self.test_adaptive(
+            "demo_user",
+            mission_id=detected_mission,
+            mission_category=mission_category,
+            cart_size=len(mock_cart_products),
+        )
+
+        # 9. Memory (V2)
         memory_res = self.test_memory("demo_user")
-        
-        # 9. Final Decision
-        checkout_allowed = prevention_res["checkout_allowed"] and risk_res["overall_risk"] < 70
-        reason = "Verification complete and risk is low." if checkout_allowed else "Checkout blocked due to missing dependencies or high risk."
-        
+
+        # 10. Final Decision (V2 Explainable)
+        readiness = verification_res["readiness_score"]
+        critical_missing = verification_res.get("critical_missing", [])
+        important_missing = verification_res.get("important_missing", [])
+        overall_risk = risk_res.get("overall_risk", 0)
+
+        checkout_allowed = prevention_res["checkout_allowed"] and not critical_missing and overall_risk < 70
+
+        if checkout_allowed:
+            reason = f"{mission_name} mission is {readiness}% ready. All critical items present."
+        else:
+            missing_desc = ""
+            if critical_missing:
+                missing_desc = f" Missing critical item{'s' if len(critical_missing) > 1 else ''}: {', '.join(c.replace('_', ' ').title() for c in critical_missing)}."
+            elif important_missing:
+                missing_desc = f" Missing important item{'s' if len(important_missing) > 1 else ''}: {', '.join(c.replace('_', ' ').title() for c in important_missing)}."
+            reason = f"{mission_name} mission is only {readiness}% ready.{missing_desc}"
+
+        recommended_actions = []
+        for item in critical_missing:
+            recommended_actions.append(f"Add {item.replace('_', ' ').title()}")
+        for item in important_missing:
+            recommended_actions.append(f"Add {item.replace('_', ' ').title()}")
+
+        risk_summary = {
+            "completion_risk": risk_res.get("completion_risk", 0),
+            "quantity_risk": risk_res.get("quantity_risk", 0),
+        }
+
         final_decision = {
             "checkout_allowed": checkout_allowed,
-            "reason": reason
+            "reason": reason,
+            "recommended_actions": recommended_actions,
+            "risk_summary": risk_summary,
         }
-        
+
         return {
             "mission_detection": detection_res,
             "verification": verification_res,
@@ -329,6 +465,7 @@ class AgentTestService:
         }
 
     def test_system_status(self) -> Dict[str, Any]:
+        """V2 System Status: counts from actual graph data."""
         table = get_table()
         items = []
         scan_kwargs = {"ProjectionExpression": "PK, SK"}
@@ -355,12 +492,6 @@ class AgentTestService:
                  (pk.startswith("PRODUCT#") and (sk.startswith("DEPENDS_ON#") or sk.startswith("COMPATIBLE_WITH#") or sk.startswith("SUBSTITUTES_FOR#"))):
                 relationships_count += 1
                 
-        # If DynamoDB is empty, fallback to mock status matching seeded totals
-        if missions_count == 0:
-            missions_count = 104
-            products_count = 1040
-            relationships_count = 5720
-            
         # Get active model configs
         diagnostics = self.detection_service.get_debug_diagnostics()
         emb_model = diagnostics.get("embedding_model", "amazon.titan-embed-text-v2:0")

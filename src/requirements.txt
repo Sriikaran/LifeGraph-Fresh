@@ -3,3 +3,5 @@ pydantic[email]==2.6.4
 fastapi
 uvicorn
 mangum
+openpyxl
+python-multipart
