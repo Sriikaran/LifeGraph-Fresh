@@ -1,0 +1,53 @@
+# dependencies
+node_modules/
+
+# build outputs
+dist/
+build/
+out/
+.next/
+
+# environment files
+.env
+.env.*
+!.env.example
+
+# logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Lovable
+.lovable/
+.lovable-cache/
+
+# Temporary
+tmp/
+temp/
+.cache/
+
+# screenshots
+screenshots/
+recordings/
+
+# local testing
+coverage/
+playwright-report/
+
+# generated files
+*.zip
+*.rar
+*.7z
+
+# system
+desktop.ini
