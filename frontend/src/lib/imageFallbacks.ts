@@ -22,7 +22,6 @@ export function getProductImage(image?: string | null, category?: string | null)
     const fallback = (category && CATEGORY_FALLBACK_IMAGES[category]) || CATEGORY_FALLBACK_IMAGES.DEFAULT;
     
     if (!image) return fallback;
-    if (image.startsWith("/assets/")) return fallback;
     
     return image;
 }
@@ -39,7 +38,7 @@ export function isPlaceholderImage(imageUrl?: string | null): boolean {
   if (!imageUrl) return true;
   const img = imageUrl.trim();
   if (img === "") return true;
-  if (img.startsWith("/assets/")) return true;
+  if (img.startsWith("/assets/categories/")) return true;
   if (img.includes("unsplash.com")) return true;
   
   for (const fallback of Object.values(CATEGORY_FALLBACK_IMAGES)) {
@@ -53,13 +52,34 @@ export function hasOriginalProductImage(product: any): boolean {
   return !isPlaceholderImage(product.image);
 }
 
+export function getImagePriorityScore(imageUrl?: string | null): number {
+  if (!imageUrl) return 0; // Priority 4
+  const img = imageUrl.trim();
+  if (img === "") return 0; // Priority 4
+
+  // Shared fallback images and known broken images (Priority 3)
+  if (img.startsWith("/assets/categories/")) return 1;
+  if (img.includes("unsplash.com")) return 1;
+  if (img.includes("/images/W/")) return 1; // Broken Amazon IMAGERENDERING URLs
+  
+  for (const fallback of Object.values(CATEGORY_FALLBACK_IMAGES)) {
+    if (img === fallback) return 1;
+  }
+  
+  // Unique real images (Priority 1)
+  if (img.startsWith("/assets/products/")) return 3;
+  
+  // Scraped images (Priority 2)
+  return 2;
+}
+
 export function sortProductsByImagePriority(products: any[]): any[] {
   return products.slice().sort((a, b) => {
-    const aScore = isPlaceholderImage(a.image) ? 0 : 1000000;
-    const bScore = isPlaceholderImage(b.image) ? 0 : 1000000;
+    const aPriority = getImagePriorityScore(a.image) * 1000000;
+    const bPriority = getImagePriorityScore(b.image) * 1000000;
     
-    const aFinal = aScore + (a.reviews || 0) + ((a.rating || 0) * 100);
-    const bFinal = bScore + (b.reviews || 0) + ((b.rating || 0) * 100);
+    const aFinal = aPriority + (a.reviews || 0) + ((a.rating || 0) * 100);
+    const bFinal = bPriority + (b.reviews || 0) + ((b.rating || 0) * 100);
     
     return bFinal - aFinal;
   });

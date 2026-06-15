@@ -50,16 +50,16 @@ function FreshHomePage() {
   const sections = useMemo(() => {
     if (!products.length) return null;
 
-    // Strict image prioritization for the homepage to ensure high-quality visual experience
-    const realImageProducts = products.filter(hasOriginalProductImage);
+    // Keep all products, rely on sortAndFilterProducts to push low-quality images to the back
+    const displayProducts = products;
 
     const getItems = (cat: string, subcats: string[], max: number = 15) => {
-      const match = realImageProducts.filter(p => p.category === cat && (subcats.length === 0 || subcats.includes(p.subcategory || '')));
+      const match = displayProducts.filter(p => p.category === cat && (subcats.length === 0 || subcats.includes(p.subcategory || '')));
       return sortAndFilterProducts(match, max);
     };
 
     return {
-      trending: sortAndFilterProducts(realImageProducts, 20),
+      trending: sortAndFilterProducts(displayProducts, 20),
       grocery: getItems("GROCERY", ["General Grocery"]),
       spices: getItems("GROCERY", ["Spices"]),
       snacks: getItems("GROCERY", ["Snacks & Confectionery"]),

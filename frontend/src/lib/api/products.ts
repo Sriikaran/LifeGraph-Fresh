@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Product } from "@/lib/products";
+import { PRODUCT_IMAGE_REGISTRY } from "@/lib/productImageRegistry";
 
 export const CATEGORY_LABELS: Record<string, string> = {
   "GROCERY": "Grocery & Staples",
@@ -29,6 +30,8 @@ export interface NormalizedProduct extends Product {
 export function normalizeProduct(p: any): NormalizedProduct {
   return {
     ...p,
+    title: p.name || p.title,
+    image: PRODUCT_IMAGE_REGISTRY[p.id] || p.image || "/assets/categories/marketplace.jpg",
     categoryLabel: CATEGORY_LABELS[p.category] || p.category.replace(/_/g, " ")
   };
 }
