@@ -1,5 +1,5 @@
 import { Target, TrendingUp } from "lucide-react";
-import { detectMission } from "@/lib/missionEngine";
+import { detectMission, isDemoMission } from "@/lib/missionEngine";
 import type { Product } from "@/lib/products";
 
 export function MissionImpactCard({ product }: { product: Product }) {
@@ -23,7 +23,7 @@ export function MissionImpactCard({ product }: { product: Product }) {
       <div className="mb-4 relative z-10">
         <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Contributes To</div>
         <div className="font-bold text-gray-900 text-lg flex items-center gap-2">
-          {missionResult.mission}
+          {isDemoMission(missionResult.mission) ? missionResult.mission : "Mission Goal"}
         </div>
       </div>
 

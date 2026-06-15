@@ -24,7 +24,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Kart.in — Online Shopping for Electronics, Fashion, Home & more" },
+      { title: "Amazon — Online Shopping for Electronics, Fashion, Home & more" },
       { name: "description", content: "Shop millions of products at the best prices with fast delivery across India." },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
@@ -77,18 +77,7 @@ function RootComponent() {
                       <main className="flex-1"><Outlet /></main>
                       {!isAuth && <Footer />}
                       
-                      {/* Floating Demo CTA */}
-                      {!isAuth && location.pathname !== '/demo' && (
-                        <div className="fixed bottom-8 right-8 z-[100]">
-                          <Link 
-                            to="/demo" 
-                            className="group flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-full font-bold text-[15px] shadow-[0_8px_30px_rgb(0,0,0,0.2)] hover:shadow-[0_8px_30px_rgba(79,70,229,0.4)] transition-all duration-300 hover:-translate-y-1"
-                          >
-                            <Rocket className="w-5 h-5 group-hover:animate-bounce" />
-                            Try Outcome Commerce Demo
-                          </Link>
-                        </div>
-                      )}
+
                     </div>
                     <Toaster position="bottom-right" />
                   </CheckoutProvider>

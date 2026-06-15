@@ -11,7 +11,7 @@ function createDummyProduct(id: string, title: string, price: number): Product {
   return {
     id,
     title,
-    brand: "Kart.in Basics",
+    brand: "Amazon Basics",
     category: "Accessories",
     image: `https://placehold.co/400x400/FAFAFA/333333?text=${encodeURIComponent(title)}`,
     price,
@@ -95,7 +95,7 @@ function DemoMode() {
             Interactive Demo Mode
           </h1>
           <p className="text-xl text-gray-500 max-w-2xl mx-auto">
-            Skip the manual shopping experience. Select a scenario below to instantly populate your cart and experience Kart.in's Outcome Verification.
+            Skip the manual shopping experience. Select a scenario below to instantly populate your cart and experience Amazon's Outcome Verification.
           </p>
         </div>
 

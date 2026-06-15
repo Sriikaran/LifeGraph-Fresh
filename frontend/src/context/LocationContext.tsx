@@ -14,7 +14,7 @@ type LocationCtx = {
 
 const Ctx = createContext<LocationCtx | null>(null);
 
-const KEY = "kartin-location-v1";
+const KEY = "amazon-location-v1";
 
 export function LocationProvider({ children }: { children: ReactNode }) {
   const [location, setLocation] = useState<LocationInfo>(() => {

@@ -20,7 +20,7 @@ type CartCtx = {
 };
 
 const Ctx = createContext<CartCtx | null>(null);
-const STORAGE_KEY = "kartin-cart-v2";
+const STORAGE_KEY = "amazon-cart-v2";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {

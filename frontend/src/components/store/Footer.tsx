@@ -44,7 +44,7 @@ export function Footer() {
     return (
       <footer className="bg-gray-100 py-6 border-t mt-auto text-center text-xs text-gray-500">
         <p>Need help? Check our Help pages or contact us</p>
-        <p className="mt-2">© 1996-2026, Kart.in, Inc. or its affiliates</p>
+        <p className="mt-2">© 1996-2026, Amazon, Inc. or its affiliates</p>
       </footer>
     );
   }

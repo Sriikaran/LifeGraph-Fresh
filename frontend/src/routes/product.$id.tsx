@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { detectMission } from "@/lib/missionEngine";
 import { MissionImpactCard } from "@/components/store/MissionImpactCard";
 import { getProductImage, handleProductImageError, sortProductsByImagePriority } from "@/lib/imageFallbacks";
+import { BackButton } from "@/components/ui/BackButton";
 
 export const Route = createFileRoute("/product/$id")({
   component: PDP,
@@ -60,7 +61,7 @@ function PDP() {
       image: "https://picsum.photos/seed/" + name.replace(/\s+/g, '') + "/200",
       rating: 4.5,
       reviews: 120,
-      brand: "Kart.in Basics",
+      brand: "Amazon Basics",
       category: "Accessories",
       prime: true,
       deliveryDays: 2
@@ -77,7 +78,8 @@ function PDP() {
 
   return (
     <div className="bg-card">
-      <div className="mx-auto max-w-[1500px] px-4 py-4 text-xs text-muted-foreground">
+      <div className="mx-auto max-w-[1500px] px-4 pt-6 pb-2 text-xs text-muted-foreground">
+        <BackButton />
         <Link to="/" className="hover:text-link-hover">Home</Link> &rsaquo;{" "}
         <Link to="/browse" search={{ cat: p.category, sort: "featured", minRating: 0, prime: false }} className="hover:text-link-hover">{p.categoryLabel}</Link> &rsaquo;{" "}
         <span>{p.brand}</span>
@@ -188,7 +190,7 @@ function PDP() {
           >Buy Now</button>
           <div className="text-xs text-gray-500 mt-4 space-y-2 flex flex-col">
             <div className="grid grid-cols-[80px_1fr] gap-2">
-              <span>Ships from</span><span className="text-gray-900 font-medium">Kart.in</span>
+              <span>Ships from</span><span className="text-gray-900 font-medium">Amazon</span>
             </div>
             <div className="grid grid-cols-[80px_1fr] gap-2">
               <span>Sold by</span><span className="text-[#007185] hover:underline cursor-pointer">{p.brand} Official</span>
@@ -217,7 +219,7 @@ function PDP() {
               <span className="text-indigo-600">🎯 Complete This Mission:</span> {missionResult.mission}
             </h2>
             <p className="text-gray-500 mb-8 max-w-2xl">
-              You're building a {missionResult.mission}. Kart.in intelligence indicates you are missing {missingProducts.length} critical components for a successful outcome.
+              You're building a {missionResult.mission}. Amazon intelligence indicates you are missing {missingProducts.length} critical components for a successful outcome.
             </p>
 
             <div className="flex flex-col md:flex-row gap-8 items-start">

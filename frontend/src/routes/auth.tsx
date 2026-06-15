@@ -181,7 +181,7 @@ function Auth() {
             </button>
             
             <p className="text-xs text-gray-500 leading-relaxed pt-2">
-              By continuing, you agree to Kart.in's <span className="text-[#007185] hover:text-[#c45500] cursor-pointer hover:underline">Conditions of Use</span> and <span className="text-[#007185] hover:text-[#c45500] cursor-pointer hover:underline">Privacy Notice</span>.
+              By continuing, you agree to Amazon's <span className="text-[#007185] hover:text-[#c45500] cursor-pointer hover:underline">Conditions of Use</span> and <span className="text-[#007185] hover:text-[#c45500] cursor-pointer hover:underline">Privacy Notice</span>.
             </p>
           </form>
         </div>

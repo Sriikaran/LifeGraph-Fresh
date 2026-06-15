@@ -9,7 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WhyKartinRouteImport } from './routes/why-kartin'
+import { Route as WhyAmazonRouteImport } from './routes/why-amazon'
 import { Route as SellRouteImport } from './routes/sell'
 import { Route as NewReleasesRouteImport } from './routes/new-releases'
 import { Route as MobilesRouteImport } from './routes/mobiles'
@@ -38,9 +38,9 @@ import { Route as AccountOrdersRouteImport } from './routes/account.orders'
 import { Route as AccountAddressesRouteImport } from './routes/account.addresses'
 import { Route as AccountAddressFormRouteImport } from './routes/account.address-form'
 
-const WhyKartinRoute = WhyKartinRouteImport.update({
-  id: '/why-kartin',
-  path: '/why-kartin',
+const WhyAmazonRoute = WhyAmazonRouteImport.update({
+  id: '/why-amazon',
+  path: '/why-amazon',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SellRoute = SellRouteImport.update({
@@ -196,7 +196,7 @@ export interface FileRoutesByFullPath {
   '/mobiles': typeof MobilesRoute
   '/new-releases': typeof NewReleasesRoute
   '/sell': typeof SellRoute
-  '/why-kartin': typeof WhyKartinRoute
+  '/why-amazon': typeof WhyAmazonRoute
   '/account/address-form': typeof AccountAddressFormRoute
   '/account/addresses': typeof AccountAddressesRoute
   '/account/orders': typeof AccountOrdersRoute
@@ -225,7 +225,7 @@ export interface FileRoutesByTo {
   '/mobiles': typeof MobilesRoute
   '/new-releases': typeof NewReleasesRoute
   '/sell': typeof SellRoute
-  '/why-kartin': typeof WhyKartinRoute
+  '/why-amazon': typeof WhyAmazonRoute
   '/account/address-form': typeof AccountAddressFormRoute
   '/account/addresses': typeof AccountAddressesRoute
   '/account/orders': typeof AccountOrdersRoute
@@ -256,7 +256,7 @@ export interface FileRoutesById {
   '/mobiles': typeof MobilesRoute
   '/new-releases': typeof NewReleasesRoute
   '/sell': typeof SellRoute
-  '/why-kartin': typeof WhyKartinRoute
+  '/why-amazon': typeof WhyAmazonRoute
   '/account/address-form': typeof AccountAddressFormRoute
   '/account/addresses': typeof AccountAddressesRoute
   '/account/orders': typeof AccountOrdersRoute
@@ -288,7 +288,7 @@ export interface FileRouteTypes {
     | '/mobiles'
     | '/new-releases'
     | '/sell'
-    | '/why-kartin'
+    | '/why-amazon'
     | '/account/address-form'
     | '/account/addresses'
     | '/account/orders'
@@ -317,7 +317,7 @@ export interface FileRouteTypes {
     | '/mobiles'
     | '/new-releases'
     | '/sell'
-    | '/why-kartin'
+    | '/why-amazon'
     | '/account/address-form'
     | '/account/addresses'
     | '/account/orders'
@@ -347,7 +347,7 @@ export interface FileRouteTypes {
     | '/mobiles'
     | '/new-releases'
     | '/sell'
-    | '/why-kartin'
+    | '/why-amazon'
     | '/account/address-form'
     | '/account/addresses'
     | '/account/orders'
@@ -378,17 +378,17 @@ export interface RootRouteChildren {
   MobilesRoute: typeof MobilesRoute
   NewReleasesRoute: typeof NewReleasesRoute
   SellRoute: typeof SellRoute
-  WhyKartinRoute: typeof WhyKartinRoute
+  WhyAmazonRoute: typeof WhyAmazonRoute
   ProductIdRoute: typeof ProductIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/why-kartin': {
-      id: '/why-kartin'
-      path: '/why-kartin'
-      fullPath: '/why-kartin'
-      preLoaderRoute: typeof WhyKartinRouteImport
+    '/why-amazon': {
+      id: '/why-amazon'
+      path: '/why-amazon'
+      fullPath: '/why-amazon'
+      preLoaderRoute: typeof WhyAmazonRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sell': {
@@ -647,7 +647,7 @@ const rootRouteChildren: RootRouteChildren = {
   MobilesRoute: MobilesRoute,
   NewReleasesRoute: NewReleasesRoute,
   SellRoute: SellRoute,
-  WhyKartinRoute: WhyKartinRoute,
+  WhyAmazonRoute: WhyAmazonRoute,
   ProductIdRoute: ProductIdRoute,
 }
 export const routeTree = rootRouteImport

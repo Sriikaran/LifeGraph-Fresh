@@ -98,7 +98,7 @@ function ReviewStep() {
           Place your order
         </button>
         <p className="text-xs text-center text-gray-500 mt-2">
-          By placing your order, you agree to Kart.in's privacy notice and conditions of use.
+          By placing your order, you agree to Amazon's privacy notice and conditions of use.
         </p>
         <div className="border-t border-gray-200 mt-4 pt-4">
           <h3 className="font-bold mb-2">Order Summary</h3>

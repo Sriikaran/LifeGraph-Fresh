@@ -10,8 +10,8 @@ import { Target, Activity, ShieldCheck, Zap, Loader2 } from "lucide-react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Kart.in - Shop for Products. Verify Outcomes." },
-      { name: "description", content: "Kart.in: Online Shopping - Buy mobiles, laptops, cameras, books, watches, apparel, shoes and e-Gift Cards. Free Shipping & Cash on Delivery Available." },
+      { title: "Amazon - Shop for Products. Verify Outcomes." },
+      { name: "description", content: "Amazon: Online Shopping - Buy mobiles, laptops, cameras, books, watches, apparel, shoes and e-Gift Cards. Free Shipping & Cash on Delivery Available." },
     ],
   }),
   component: Home,
@@ -54,11 +54,11 @@ function Home() {
               <span className="text-indigo-600">Verify Outcomes.</span>
             </h2>
             <p className="text-gray-500 text-lg mb-8 max-w-md">
-              Kart.in helps ensure your purchase actually achieves your goal. Don't just buy parts, complete your mission.
+              Amazon helps ensure your purchase actually achieves your goal. Don't just buy parts, complete your mission.
             </p>
             <div className="flex gap-4">
-              <Link to="/why-kartin" className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-900 px-6 py-3 rounded-lg font-bold text-sm shadow-sm transition-colors">
-                Learn Why Kart.in Works
+              <Link to="/why-amazon" className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-900 px-6 py-3 rounded-lg font-bold text-sm shadow-sm transition-colors">
+                Learn Why Amazon Works
               </Link>
               <Link to="/demo" className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-bold text-sm shadow-sm transition-colors">
                 Try Demo Mode &rarr;

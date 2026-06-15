@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useCartContext } from "@/context/CartContext";
-import { detectMission } from "@/lib/missionEngine";
+import { detectMission, isDemoMission } from "@/lib/missionEngine";
 import { Target, AlertTriangle, ArrowRight, CheckCircle2, XCircle, ShoppingBag } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
@@ -29,7 +29,7 @@ export function OutcomeIntelligencePanel() {
             🎯 Build Outcomes, Not Carts
           </h3>
           <p className="text-gray-500 text-base leading-relaxed max-w-[320px] mb-8">
-            Add products and Kart.in will identify your goal, detect missing components, and estimate your likelihood of success.
+            Add products and Amazon will identify your goal, detect missing components, and estimate your likelihood of success.
           </p>
           <Link 
             to="/browse"
@@ -67,7 +67,9 @@ export function OutcomeIntelligencePanel() {
             {result.riskScore} Risk
           </span>
         </div>
-        <h2 className="text-[34px] md:text-4xl font-extrabold text-gray-900 tracking-tighter leading-tight">{result.mission}</h2>
+        <h2 className="text-[34px] md:text-4xl font-extrabold text-gray-900 tracking-tighter leading-tight">
+          {isDemoMission(result.mission) ? result.mission : "Mission Detected"}
+        </h2>
       </div>
 
       <div className="p-8 space-y-10">

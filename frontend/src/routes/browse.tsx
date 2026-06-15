@@ -4,9 +4,11 @@ import { useProducts, CATEGORY_LABELS } from "@/lib/api/products";
 import { sortProductsByImagePriority, hasOriginalProductImage } from "@/lib/imageFallbacks";
 import { ProductCard, StarRating } from "@/components/store/ProductCard";
 import { ChevronDown, Loader2 } from "lucide-react";
+import { BackButton } from "@/components/ui/BackButton";
 
 export const Route = createFileRoute("/browse")({
   validateSearch: (s: Record<string, unknown>) => ({
+    q: (s.q as string) || "",
     cat: (s.cat as string) || "",
     sort: (s.sort as string) || "featured",
     minRating: Number(s.minRating) || 0,
@@ -56,6 +58,7 @@ function Browse() {
   return (
     <div className="mx-auto max-w-[1500px] px-2 py-4 flex gap-4">
       <aside className="hidden lg:block w-60 shrink-0 bg-card p-4 h-fit sticky top-[105px]">
+        <BackButton />
         <h3 className="font-bold mb-2">Category</h3>
         <ul className="space-y-1 text-sm mb-4">
           <li>

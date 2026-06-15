@@ -12,7 +12,9 @@ export function Header({ onOpenMenu }: { onOpenMenu?: () => void }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [q, setQ] = useState("");
+  const searchParams = location.search as Record<string, unknown>;
+  const initialQ = (searchParams?.q as string) || "";
+  const [q, setQ] = useState(initialQ);
   const [cat, setCat] = useState("All Categories");
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
@@ -61,11 +63,7 @@ export function Header({ onOpenMenu }: { onOpenMenu?: () => void }) {
               <span className="text-[20px] font-normal relative -top-[18px] ml-1">.in</span>
             </Link>
 
-            {/* Kart.in Intelligence Badge */}
-            <div className="hidden lg:flex items-center ml-2 px-2.5 py-1 bg-indigo-900/50 border border-indigo-700/50 rounded-full mt-1">
-              <BrainCircuit className="w-3.5 h-3.5 text-indigo-400 mr-1.5" />
-              <span className="text-[11px] font-bold text-indigo-200 tracking-wide uppercase">Outcome Commerce</span>
-            </div>
+
 
             <button onClick={() => setIsLocationModalOpen(true)} className="hidden md:flex items-end px-[12px] pb-[16px] hover:outline hover:outline-1 hover:outline-white rounded-[2px] h-[72px] ml-[4px] cursor-pointer text-left">
               <MapPin className="h-[20px] w-[20px] text-white mb-[1px] mr-[4px]" strokeWidth={2} />
@@ -129,7 +127,7 @@ export function Header({ onOpenMenu }: { onOpenMenu?: () => void }) {
                     <Link to="/account" className="text-base font-bold hover:text-[#c45500] hover:underline block mb-3">Your Account</Link>
                     <Link to="/account/orders" className="text-base hover:text-[#c45500] hover:underline block mb-3">Your Orders</Link>
                     <Link to="/mission-history" className="text-base hover:text-[#c45500] hover:underline block mb-3">Mission History</Link>
-                    <Link to="/why-kartin" className="text-base hover:text-[#c45500] hover:underline block mb-3 flex items-center gap-1.5"><BrainCircuit className="w-4 h-4 text-indigo-500" /> Why Kart.in?</Link>
+                    <Link to="/why-amazon" className="text-base hover:text-[#c45500] hover:underline block mb-3 flex items-center gap-1.5"><BrainCircuit className="w-4 h-4 text-indigo-500" /> Why Amazon?</Link>
                     <Link to="/account/wishlist" className="text-base hover:text-[#c45500] hover:underline block mb-3">Your Wish List</Link>
                     <Link to="/account" className="text-base hover:text-[#c45500] hover:underline block">Your Addresses</Link>
                   </div>
@@ -167,7 +165,7 @@ export function Header({ onOpenMenu }: { onOpenMenu?: () => void }) {
         </div>
 
         {/* nav-main */}
-        <div id="nav-main" className="bg-[#232f3e] text-white flex items-center h-[50px] px-[14px] overflow-visible whitespace-nowrap w-full relative z-30">
+        <div id="nav-main" className="bg-[#232f3e] text-white flex items-center h-[50px] px-[14px] overflow-hidden whitespace-nowrap w-full relative z-30">
           <button 
             onClick={() => setIsDrawerOpen(true)}
             className="flex items-center gap-1 px-[10px] py-[10px] hover:outline hover:outline-1 hover:outline-white rounded-[2px] font-bold text-[16px] shrink-0 cursor-pointer"
@@ -175,7 +173,7 @@ export function Header({ onOpenMenu }: { onOpenMenu?: () => void }) {
             <Menu className="h-5 w-5 mr-1" /> All
           </button>
           
-          <div className="flex items-center gap-1 overflow-hidden shrink-0 ml-2">
+          <div className="flex items-center gap-1 overflow-x-auto min-w-0 w-full ml-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Link to="/fresh" className="px-[8px] py-[6px] hover:outline hover:outline-1 hover:outline-white rounded-[2px] text-[15px] cursor-pointer font-normal text-white">Fresh</Link>
             <Link to="/" className="px-[8px] py-[6px] hover:outline hover:outline-1 hover:outline-white rounded-[2px] text-[15px] cursor-pointer font-normal text-white">MX Player</Link>
             <Link to="/" className="px-[8px] py-[6px] hover:outline hover:outline-1 hover:outline-white rounded-[2px] text-[15px] cursor-pointer font-normal text-white">Sell</Link>

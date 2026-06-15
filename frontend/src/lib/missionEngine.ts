@@ -1,4 +1,18 @@
 import { PRODUCTS } from "./products";
+import type { CartItem } from "@/context/CartContext";
+
+export const DEMO_MISSION_NAMES = [
+  "Movie Night",
+  "Weight Loss Journey",
+  "Festival Preparation",
+  "Healthy Breakfast",
+  "Late Night Study Session",
+  "Train Journey Snacks"
+];
+
+export function isDemoMission(missionName: string): boolean {
+  return DEMO_MISSION_NAMES.includes(missionName);
+}
 
 export type MissionGraphItem = {
   name: string;

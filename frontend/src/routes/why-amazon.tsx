@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Target, Activity, CheckCircle, Database, Server, Network, BrainCircuit, LineChart, ShieldCheck } from "lucide-react";
 
-export const Route = createFileRoute("/why-kartin")({
+export const Route = createFileRoute("/why-amazon")({
   component: WhyKartIn,
 });
 

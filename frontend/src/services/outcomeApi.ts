@@ -47,9 +47,21 @@ export interface OutcomeResponse {
   mission_coherence_score?: number;
 }
 
+import { checkDemoMode } from './demoInterceptor';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export async function analyzeOutcome(query: string): Promise<OutcomeResponse> {
+  // Demo Mode Interceptor
+  const demoResult = checkDemoMode(query);
+  if (demoResult) {
+    console.log("[Outcome API] Demo mode intercepted query:", query);
+    // Simulate AI processing delay (3 to 6 seconds) for realistic demo
+    const delay = Math.floor(Math.random() * 3000) + 3000;
+    await new Promise(resolve => setTimeout(resolve, delay));
+    return demoResult;
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/orchestrator/outcome-intelligence`, {
       method: "POST",

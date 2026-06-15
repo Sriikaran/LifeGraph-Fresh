@@ -12,6 +12,8 @@ import { useLocationContext } from "@/context/LocationContext";
 import { toast } from "sonner";
 import { CheckCircle2, MapPin } from "lucide-react";
 import { getProductImage, handleProductImageError } from "@/lib/imageFallbacks";
+import { MissionCompletionAssistant } from "@/components/intelligence/MissionCompletionAssistant";
+import { CartDiscoverySections } from "@/components/cart/CartDiscoverySections";
 
 export const Route = createFileRoute("/cart")({
   component: Cart,
@@ -55,8 +57,8 @@ function Cart() {
           <span className="text-sm text-gray-400 font-semibold uppercase tracking-wider">Price</span>
         </div>
         {cartItems.length === 0 ? (
-          <div className="py-12 text-center">
-            <h2 className="text-2xl font-bold mb-2">Your Kart.in Cart is empty.</h2>
+          <div className="py-4">
+            <h2 className="text-2xl font-bold mb-2">Your Amazon Cart is empty.</h2>
             <Link to="/browse" className="text-link hover:text-link-hover hover:underline text-lg">Shop today's deals</Link>
           </div>
         ) : (
@@ -102,6 +104,12 @@ function Cart() {
             </div>
           </>
         )}
+        
+        {/* Intelligence Assistant */}
+        <MissionCompletionAssistant />
+
+        {/* Discovery Sections */}
+        <CartDiscoverySections />
       </div>
 
       {/* 30% Right Section - Intelligence & Checkout */}
